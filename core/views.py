@@ -60,3 +60,44 @@ def results(request, job_id):
         "job": job
     })
 
+from django.http import HttpResponse
+import openpyxl
+from openpyxl.styles import Font
+
+def download_excel(request, job_id):
+    job = Job.objects.get(id=job_id)
+
+    shortlisted = Resume.objects.filter(
+        job=job,
+        similarity_score__gte=0.75
+    ).order_by("-similarity_score")
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Shortlisted Candidates"
+
+    # Header row
+    headers = ["File Name", "Similarity Score", "Status"]
+    ws.append(headers)
+
+    for col in range(1, 4):
+        ws.cell(row=1, column=col).font = Font(bold=True)
+
+    for r in shortlisted:
+        filename = r.file.name.split("/")[-1]   # <-- IMPORTANT FIX
+
+        ws.append([
+            filename,
+            round(r.similarity_score, 3),
+            "Shortlisted"
+        ])
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="shortlisted_candidates.xlsx"'
+
+    wb.save(response)
+    return response
+
+

@@ -2,6 +2,10 @@
 <html>
 <body>
 <h2>Shortlisted Candidates</h2>
+<a href="{% url 'download_excel' job.id %}">
+    <button>Download Shortlisted List (Excel)</button>
+</a>
+
 
 <table border="1" cellpadding="8">
 <tr>
