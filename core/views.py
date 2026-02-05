@@ -44,9 +44,19 @@ def upload_resumes(request, job_id):
 
 def results(request, job_id):
     job = Job.objects.get(id=job_id)
-    resumes = job.resumes.all().order_by("-similarity_score")
+
+    resumes = Resume.objects.filter(job=job).order_by("-similarity_score")
+
+    for r in resumes:
+        if r.similarity_score >= 0.75:
+            r.status = "Shortlisted ✅"
+        elif r.similarity_score >= 0.50:
+            r.status = "Review ⚠️"
+        else:
+            r.status = "Rejected ❌"
 
     return render(request, "core/results.html", {
-        "job": job,
-        "resumes": resumes
+        "resumes": resumes,
+        "job": job
     })
+

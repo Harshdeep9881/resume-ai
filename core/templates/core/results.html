@@ -3,16 +3,18 @@
 <body>
 <h2>Shortlisted Candidates</h2>
 
-<table border="1">
+<table border="1" cellpadding="8">
 <tr>
 <th>Name</th>
 <th>Similarity Score</th>
+<th>Status</th>
 </tr>
 
 {% for r in resumes %}
 <tr>
 <td>{{ r.name }}</td>
 <td>{{ r.similarity_score }}</td>
+<td>{{ r.status }}</td>
 </tr>
 {% endfor %}
 </table>
