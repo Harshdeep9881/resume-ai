@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Upload Resumes (PDF)</h2>
+
+<form method="post" enctype="multipart/form-data">
+{% csrf_token %}
+<input type="file" name="resumes" multiple accept="application/pdf"><br><br>
+<button type="submit">Analyze</button>
+</form>
+
+</body>
+</html>

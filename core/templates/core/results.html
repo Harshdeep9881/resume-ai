@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Shortlisted Candidates</h2>
+
+<table border="1">
+<tr>
+<th>Name</th>
+<th>Similarity Score</th>
+</tr>
+
+{% for r in resumes %}
+<tr>
+<td>{{ r.name }}</td>
+<td>{{ r.similarity_score }}</td>
+</tr>
+{% endfor %}
+</table>
+
+</body>
+</html>
