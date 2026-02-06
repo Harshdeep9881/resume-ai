@@ -125,5 +125,3 @@ load_dotenv()
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
