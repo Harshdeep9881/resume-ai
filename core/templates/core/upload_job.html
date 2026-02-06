@@ -39,6 +39,17 @@
                         <textarea name="description" rows="7" class="form-control" placeholder="List responsibilities, must-have skills, and preferred experience." required></textarea>
                     </div>
 
+                    <div class="mb-4">
+                        <label class="form-label">Select Skills</label>
+                        <div class="skill-input" data-skill-input>
+                            <div class="skill-tags" id="skill-tags"></div>
+                            <input type="text" id="skill-input" class="skill-field" placeholder="Type a skill like htm or react" autocomplete="off">
+                            <input type="hidden" name="skills_json" id="skills-json" value="[]">
+                            <div class="skill-suggestions" id="skill-suggestions"></div>
+                        </div>
+                        <small class="muted-text">Selected skills will be used for matching instead of parsing the description.</small>
+                    </div>
+
                     <button type="submit" class="btn btn-primary btn-lg">
                         Continue to Resume Upload
                     </button>
@@ -66,6 +77,110 @@
         </div>
     </div>
 </div>
+
+{{ skill_list|json_script:"skill-data" }}
+<script>
+    const skillList = JSON.parse(document.getElementById("skill-data").textContent);
+    const input = document.getElementById("skill-input");
+    const tags = document.getElementById("skill-tags");
+    const suggestions = document.getElementById("skill-suggestions");
+    const skillsJson = document.getElementById("skills-json");
+    const selected = new Set();
+
+    function syncHidden() {
+        skillsJson.value = JSON.stringify(Array.from(selected));
+    }
+
+    function addTag(skill) {
+        if (!skill || selected.has(skill)) {
+            return;
+        }
+        selected.add(skill);
+        const chip = document.createElement("span");
+        chip.className = "skill-chip";
+        chip.textContent = skill;
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "skill-remove";
+        removeBtn.textContent = "×";
+        removeBtn.addEventListener("click", () => {
+            selected.delete(skill);
+            chip.remove();
+            syncHidden();
+        });
+
+        chip.appendChild(removeBtn);
+        tags.appendChild(chip);
+        syncHidden();
+    }
+
+    function renderSuggestions(matches) {
+        suggestions.innerHTML = "";
+        if (!matches.length) {
+            suggestions.classList.remove("show");
+            return;
+        }
+        matches.forEach((skill) => {
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "skill-suggestion";
+            item.textContent = skill;
+            item.addEventListener("click", () => {
+                addTag(skill);
+                input.value = "";
+                renderSuggestions([]);
+                input.focus();
+            });
+            suggestions.appendChild(item);
+        });
+        suggestions.classList.add("show");
+    }
+
+    function findMatches(value) {
+        const query = value.trim().toLowerCase();
+        if (!query) {
+            return [];
+        }
+        const startsWith = [];
+        const contains = [];
+        skillList.forEach((skill) => {
+            const lower = skill.toLowerCase();
+            if (selected.has(skill)) {
+                return;
+            }
+            if (lower.startsWith(query)) {
+                startsWith.push(skill);
+            } else if (lower.includes(query)) {
+                contains.push(skill);
+            }
+        });
+        return startsWith.concat(contains).slice(0, 8);
+    }
+
+    input.addEventListener("input", (event) => {
+        const matches = findMatches(event.target.value);
+        renderSuggestions(matches);
+    });
+
+    input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            const matches = findMatches(input.value);
+            if (matches.length) {
+                addTag(matches[0]);
+            }
+            input.value = "";
+            renderSuggestions([]);
+        }
+    });
+
+    document.addEventListener("click", (event) => {
+        if (!event.target.closest("[data-skill-input]")) {
+            renderSuggestions([]);
+        }
+    });
+</script>
 
 </body>
 </html>

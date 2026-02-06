@@ -1,7 +1,9 @@
+import json
 from django.shortcuts import render, redirect
 from .models import Job, Resume
 from .utils import extract_text_from_pdf
 from .embeddings import compute_similarity, extract_skills
+from .skills import SKILL_LIST
 
 
 def home(request):
@@ -12,12 +14,24 @@ def upload_job(request):
     if request.method == "POST":
         title = request.POST.get("title")
         description = request.POST.get("description")
+        skills_json = request.POST.get("skills_json", "[]")
 
-        job = Job.objects.create(title=title, description=description)
+        try:
+            selected_skills = json.loads(skills_json)
+        except Exception:
+            selected_skills = []
+
+        job = Job.objects.create(
+            title=title,
+            description=description,
+            skills=selected_skills
+        )
 
         return redirect("upload_resumes", job_id=job.id)
 
-    return render(request, "core/upload_job.html")
+    return render(request, "core/upload_job.html", {
+        "skill_list": SKILL_LIST
+    })
 
 
 def upload_resumes(request, job_id):
@@ -48,7 +62,10 @@ def results(request, job_id):
 
     # Extract skills from job description once
     try:
-        job_skills = extract_skills(job.description)
+        if job.skills:
+            job_skills = job.skills
+        else:
+            job_skills = extract_skills(job.description)
     except:
         job_skills = []
 
@@ -124,5 +141,4 @@ def download_excel(request, job_id):
 
     wb.save(response)
     return response
-
 

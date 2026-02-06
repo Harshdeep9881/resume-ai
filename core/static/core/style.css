@@ -148,6 +148,89 @@ body.app-body {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
+.skill-input {
+  position: relative;
+  padding: 10px 12px 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #fff;
+}
+
+.skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--brand-700);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.skill-remove {
+  border: none;
+  background: transparent;
+  color: var(--brand-700);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.skill-field {
+  border: none;
+  outline: none;
+  width: 100%;
+  padding: 6px 2px;
+  font-size: 0.95rem;
+}
+
+.skill-suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  z-index: 20;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.skill-suggestions.show {
+  display: flex;
+}
+
+.skill-suggestion {
+  border: none;
+  background: rgba(15, 23, 42, 0.04);
+  padding: 8px 10px;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--ink-700);
+  cursor: pointer;
+}
+
+.skill-suggestion:hover {
+  background: rgba(59, 130, 246, 0.18);
+  color: var(--brand-700);
+}
+
 .file-drop {
   border: 1.5px dashed rgba(59, 130, 246, 0.5);
   border-radius: var(--radius-md);
