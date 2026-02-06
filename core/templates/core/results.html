@@ -25,25 +25,14 @@
     </div>
 
     <div class="hero-card mb-4">
-        <h3 class="mb-2">Results for: {{ job.title }}</h3>
-        <p class="muted-text mb-3">AI-ranked candidates based on job match.</p>
-        <div class="results-summary">
-            <div class="summary-tile">
-                <div class="muted-text">Total resumes</div>
-                <strong>{{ resumes|length }}</strong>
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <h3 class="mb-2">Results for: {{ job.title }}</h3>
+                <p class="muted-text mb-0">AI-ranked candidates based on job match.</p>
             </div>
-            <div class="summary-tile">
-                <div class="muted-text">Shortlist threshold</div>
-                <strong>0.75+</strong>
-            </div>
-            <div class="summary-tile">
-                <div class="muted-text">Review band</div>
-                <strong>0.50 - 0.74</strong>
-            </div>
-            <div class="summary-tile">
-                <div class="muted-text">Below threshold</div>
-                <strong>&lt; 0.50</strong>
-            </div>
+            <a href="{% url 'dashboard' job.id %}" class="btn btn-outline-dark">
+                View Candidate Dashboard
+            </a>
         </div>
     </div>
 

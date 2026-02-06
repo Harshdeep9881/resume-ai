@@ -75,7 +75,7 @@ def results(request, job_id):
         job_skills = []
 
 
-    resumes = Resume.objects.filter(job=job).order_by("-similarity_score")
+    resumes = list(Resume.objects.filter(job=job).order_by("-similarity_score"))
 
     for r in resumes:
         # Extract skills from each resume
@@ -103,7 +103,34 @@ def results(request, job_id):
 
     return render(request, "core/results.html", {
         "resumes": resumes,
-        "job": job
+        "job": job,
+    })
+
+
+def dashboard(request, job_id):
+    job = Job.objects.get(id=job_id)
+    resumes = list(Resume.objects.filter(job=job))
+    total_resumes = len(resumes)
+    shortlisted_count = 0
+    rejected_count = 0
+    score_sum = 0.0
+
+    for r in resumes:
+        if r.similarity_score >= 0.75:
+            shortlisted_count += 1
+        elif r.similarity_score < 0.50:
+            rejected_count += 1
+
+        score_sum += r.similarity_score
+
+    avg_score = round(score_sum / total_resumes, 4) if total_resumes else 0.0
+
+    return render(request, "core/dashboard.html", {
+        "job": job,
+        "total_resumes": total_resumes,
+        "shortlisted_count": shortlisted_count,
+        "rejected_count": rejected_count,
+        "avg_score": avg_score
     })
 
 
