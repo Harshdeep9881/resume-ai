@@ -2,27 +2,57 @@
 <html>
 <head>
     <title>Results</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Source+Sans+3:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% load static %}
+    <link href="{% static 'core/style.css' %}" rel="stylesheet">
 </head>
-<body class="bg-light">
+<body class="app-body">
 
-<div class="container mt-5">
+<div class="container app-shell">
 
-    <div class="card shadow p-4 mb-4">
-        <h3>📊 Results for: {{ job.title }}</h3>
-        <p class="text-muted">AI-ranked candidates based on job match.</p>
-
+    <div class="app-nav mb-4">
+        <div class="brand-mark">
+            <span class="brand-dot"></span>
+            <span>AI Resume Analyzer</span>
+        </div>
         <a href="{% url 'download_excel' job.id %}" class="btn btn-primary">
-            📥 Download Shortlisted List (Excel)
+            Download Shortlisted List
         </a>
     </div>
 
-    <div class="card shadow p-4">
-        <table class="table table-striped table-hover">
-            <thead class="table-dark">
-                <tr>
-                    <th>Name</th>
-                    <th>Similarity Score</th>
+    <div class="hero-card mb-4">
+        <h3 class="mb-2">Results for: {{ job.title }}</h3>
+        <p class="muted-text mb-3">AI-ranked candidates based on job match.</p>
+        <div class="results-summary">
+            <div class="summary-tile">
+                <div class="muted-text">Total resumes</div>
+                <strong>{{ resumes|length }}</strong>
+            </div>
+            <div class="summary-tile">
+                <div class="muted-text">Shortlist threshold</div>
+                <strong>0.75+</strong>
+            </div>
+            <div class="summary-tile">
+                <div class="muted-text">Review band</div>
+                <strong>0.50 - 0.74</strong>
+            </div>
+            <div class="summary-tile">
+                <div class="muted-text">Below threshold</div>
+                <strong>&lt; 0.50</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-card">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr class="text-uppercase text-muted small">
+                    <th>Candidate</th>
+                    <th>Score</th>
                     <th>Status</th>
                 </tr>
             </thead>
@@ -30,8 +60,16 @@
             <tbody>
 {% for r in resumes %}
 <tr>
-    <td>{{ r.file.name|slice:"9:" }}</td>
-    <td>{{ r.similarity_score|floatformat:2 }}</td>
+    <td>
+        <div class="fw-semibold">{{ r.file.name|slice:"9:" }}</div>
+        <div class="muted-text small">Resume PDF</div>
+    </td>
+    <td>
+        <div class="score-chip mb-2">{{ r.similarity_score|floatformat:2 }}</div>
+        <div class="score-bar" style="--score: {{ r.similarity_score|floatformat:2 }};">
+            <span></span>
+        </div>
+    </td>
 
     <td>
     {% if r.similarity_score >= 0.75 %}
@@ -46,8 +84,16 @@
 
 <tr>
     <td colspan="3">
-        <strong>Matched Skills:</strong> {{ r.matched_skills }} <br>
-        <strong>Missing Skills:</strong> {{ r.missing_skills }}
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="muted-text">Matched Skills</div>
+                <div class="fw-semibold">{{ r.matched_skills }}</div>
+            </div>
+            <div class="col-md-6">
+                <div class="muted-text">Missing Skills</div>
+                <div class="fw-semibold">{{ r.missing_skills }}</div>
+            </div>
+        </div>
     </td>
 </tr>
 {% endfor %}

@@ -2,21 +2,66 @@
 <html>
 <head>
     <title>AI Resume Analyzer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Source+Sans+3:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% load static %}
+    <link href="{% static 'core/style.css' %}" rel="stylesheet">
 </head>
-<body class="bg-light">
+<body class="app-body">
 
-<div class="container mt-5">
-    <div class="card shadow p-4 text-center">
-        <h2 class="mb-3">🤖 AI Resume Shortlisting System</h2>
-        <p class="text-muted">
-            Upload a job description and multiple resumes.  
-            Our AI will automatically rank and shortlist candidates.
-        </p>
+<div class="container app-shell">
+    <div class="app-nav mb-4">
+        <div class="brand-mark">
+            <span class="brand-dot"></span>
+            <span>AI Resume Analyzer</span>
+        </div>
+        <a href="/upload-job/" class="btn btn-outline-dark">Start New Shortlist</a>
+    </div>
 
-        <a href="/upload-job/" class="btn btn-primary mt-3">
-            Start Hiring 🚀
-        </a>
+    <div class="hero-card mb-4">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-7">
+                <div class="stat-pill mb-3">Smart ranking in minutes</div>
+                <h2 class="hero-title mb-3">Hire with clarity, powered by AI matching.</h2>
+                <p class="hero-subtitle mb-4">
+                    Upload a job description and a stack of resumes. We score, rank, and surface the best-fit
+                    candidates with matched and missing skills in one view.
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a href="/upload-job/" class="btn btn-primary btn-lg">Start Hiring</a>
+                    <a href="/upload-job/" class="btn btn-outline-dark btn-lg">See How It Works</a>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="step-card">
+                    <h6>Today’s Focus</h6>
+                    <p class="muted-text mb-3">Keep a consistent hiring bar with AI-assisted scoring.</p>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="stat-pill">Score alignment instantly</div>
+                        <div class="stat-pill">Surface matched skills</div>
+                        <div class="stat-pill">Export shortlist to Excel</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="step-grid">
+        <div class="step-card">
+            <h6>1. Upload job</h6>
+            <p class="muted-text mb-0">Paste role requirements and expectations in seconds.</p>
+        </div>
+        <div class="step-card">
+            <h6>2. Add resumes</h6>
+            <p class="muted-text mb-0">Drop multiple PDFs and let the model scan them.</p>
+        </div>
+        <div class="step-card">
+            <h6>3. Review matches</h6>
+            <p class="muted-text mb-0">See ranked candidates with skills gaps highlighted.</p>
+        </div>
     </div>
 </div>
 
