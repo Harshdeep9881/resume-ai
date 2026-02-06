@@ -28,23 +28,31 @@
             </thead>
 
             <tbody>
-            {% for r in resumes %}
-            <tr>
-                <td>{{ r.file.name|slice:"9:" }}</td>
-                <td>{{ r.similarity_score|floatformat:2 }}</td>
+{% for r in resumes %}
+<tr>
+    <td>{{ r.file.name|slice:"9:" }}</td>
+    <td>{{ r.similarity_score|floatformat:2 }}</td>
 
-                <td>
-                {% if r.similarity_score >= 0.75 %}
-                    <span class="badge bg-success">Shortlisted</span>
-                {% elif r.similarity_score >= 0.50 %}
-                    <span class="badge bg-warning text-dark">Review</span>
-                {% else %}
-                    <span class="badge bg-danger">Rejected</span>
-                {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
+    <td>
+    {% if r.similarity_score >= 0.75 %}
+        <span class="badge bg-success">Shortlisted</span>
+    {% elif r.similarity_score >= 0.50 %}
+        <span class="badge bg-warning text-dark">Review</span>
+    {% else %}
+        <span class="badge bg-danger">Rejected</span>
+    {% endif %}
+    </td>
+</tr>
+
+<tr>
+    <td colspan="3">
+        <strong>Matched Skills:</strong> {{ r.matched_skills }} <br>
+        <strong>Missing Skills:</strong> {{ r.missing_skills }}
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+
         </table>
     </div>
 

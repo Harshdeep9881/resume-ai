@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect
 from .models import Job, Resume
 from .utils import extract_text_from_pdf
-from .embeddings import compute_similarity
+from .embeddings import compute_similarity, extract_skills
+
 
 def home(request):
     return render(request, "core/home.html")
@@ -45,20 +46,44 @@ def upload_resumes(request, job_id):
 def results(request, job_id):
     job = Job.objects.get(id=job_id)
 
+    # Extract skills from job description once
+    try:
+        job_skills = extract_skills(job.description)
+    except:
+        job_skills = []
+
+
     resumes = Resume.objects.filter(job=job).order_by("-similarity_score")
 
     for r in resumes:
+        # Extract skills from each resume
+        try:
+            resume_skills = extract_skills(r.extracted_text)
+        except:
+            resume_skills = []
+
+
+        # Compute matched & missing skills
+        matched = list(set(job_skills) & set(resume_skills))
+        missing = list(set(job_skills) - set(resume_skills))
+
+        # Attach to object for template
+        r.matched_skills = ", ".join(matched) if matched else "None"
+        r.missing_skills = ", ".join(missing) if missing else "None"
+
+        # Status logic
         if r.similarity_score >= 0.75:
-            r.status = "Shortlisted ✅"
+            r.status = "Shortlisted"
         elif r.similarity_score >= 0.50:
-            r.status = "Review ⚠️"
+            r.status = "Review"
         else:
-            r.status = "Rejected ❌"
+            r.status = "Rejected"
 
     return render(request, "core/results.html", {
         "resumes": resumes,
         "job": job
     })
+
 
 from django.http import HttpResponse
 import openpyxl
