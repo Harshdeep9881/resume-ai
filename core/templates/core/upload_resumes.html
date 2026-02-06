@@ -30,10 +30,11 @@
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="position-relative file-drop mb-4">
-                        <input class="file-input" type="file" name="resumes" multiple accept="application/pdf">
+                        <input class="file-input" id="resumeInput" type="file" name="resumes" multiple accept="application/pdf">
                         <div class="d-flex flex-column gap-2">
                             <strong>Drag and drop PDFs here</strong>
                             <span class="muted-text">Or click to browse from your device</span>
+                            <span class="muted-text small" id="fileList">No files selected yet</span>
                         </div>
                     </div>
 
@@ -65,5 +66,19 @@
     </div>
 </div>
 
+<script>
+  const resumeInput = document.getElementById("resumeInput");
+  const fileList = document.getElementById("fileList");
+
+  resumeInput.addEventListener("change", () => {
+    const files = Array.from(resumeInput.files || []);
+    if (!files.length) {
+      fileList.textContent = "No files selected yet";
+      return;
+    }
+    const names = files.map((file) => file.name);
+    fileList.textContent = names.join(", ");
+  });
+</script>
 </body>
 </html>
