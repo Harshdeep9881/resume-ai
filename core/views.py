@@ -43,7 +43,12 @@ def upload_resumes(request, job_id):
         for file in files:
             text = extract_text_from_pdf(file)
 
-            score = compute_similarity(job.description, text)
+            if job.skills:
+                resume_skills = extract_skills(text)
+                matched = list(set(job.skills) & set(resume_skills))
+                score = round(len(matched) / len(job.skills), 4) if job.skills else 0.0
+            else:
+                score = compute_similarity(job.description, text)
 
             Resume.objects.create(
                 job=job,
@@ -141,4 +146,3 @@ def download_excel(request, job_id):
 
     wb.save(response)
     return response
-
