@@ -1,9 +1,7 @@
-from django.contrib import admin
 from django.urls import path
 from core import views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('', views.home, name="home"),
     path('upload-job/', views.upload_job, name="upload_job"),
     path('upload-resumes/<int:job_id>/', views.upload_resumes, name="upload_resumes"),
