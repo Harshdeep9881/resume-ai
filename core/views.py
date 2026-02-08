@@ -121,8 +121,10 @@ def results(request, job_id):
         r.fit_summary = analysis["fit_summary"]
         r.gap_analysis = analysis["gap_analysis"]
 
-        # Status logic
-        if r.similarity_score >= 0.75:
+        # Status logic: prioritize must-have coverage over score
+        if r.must_skills and not analysis["missing_skills"]:
+            r.status = "Shortlisted"
+        elif r.similarity_score >= 0.75:
             r.status = "Shortlisted"
         elif r.similarity_score >= 0.50:
             r.status = "Review"
@@ -154,7 +156,9 @@ def dashboard(request, job_id):
             precomputed=precomputed,
         )
         r.similarity_score = analysis["overall_score"]
-        if r.similarity_score >= 0.75:
+        if r.must_skills and not analysis["missing_skills"]:
+            shortlisted_count += 1
+        elif r.similarity_score >= 0.75:
             shortlisted_count += 1
         elif r.similarity_score < 0.50:
             rejected_count += 1
@@ -191,7 +195,9 @@ def download_excel(request, job_id):
             precomputed=precomputed,
         )
         r.similarity_score = analysis["overall_score"]
-        if r.similarity_score >= 0.75:
+        if analysis["must_skills"] and not analysis["missing_skills"]:
+            shortlisted.append(r)
+        elif r.similarity_score >= 0.75:
             shortlisted.append(r)
 
     shortlisted.sort(key=lambda resume: resume.similarity_score, reverse=True)
