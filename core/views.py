@@ -4,7 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 from .models import Job, Resume
-from .utils import extract_text_from_pdf
+from django.contrib import messages
+from .utils import extract_text_from_file
 from .embeddings import compute_similarity
 from .scoring import classify_job_requirements, score_resume
 from .skills import SKILL_LIST
@@ -62,7 +63,14 @@ def upload_resumes(request, job_id):
         precomputed = classify_job_requirements(job.description, job.skills)
 
         for file in files:
-            text = extract_text_from_pdf(file)
+            try:
+                text = extract_text_from_file(file)
+            except RuntimeError as exc:
+                messages.error(
+                    request,
+                    f"{file.name}: OCR unavailable. Install tesseract-ocr and pytesseract to read images.",
+                )
+                continue
 
             if job.skills or job.description:
                 analysis = score_resume(

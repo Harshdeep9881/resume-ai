@@ -22,6 +22,7 @@ pycparser==3.0
 pydantic==2.12.5
 pydantic_core==2.41.5
 PyPDF2==3.0.1
+pytesseract==0.3.13
 pypdfium2==5.3.0
 python-dotenv==1.2.1
 sentence-transformers
