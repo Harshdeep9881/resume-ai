@@ -84,13 +84,35 @@
 <tr>
     <td colspan="3">
         <div class="row g-3">
-            <div class="col-md-6">
-                <div class="muted-text">Matched Skills</div>
-                <div class="fw-semibold">{{ r.matched_skills }}</div>
+            <div class="col-lg-4">
+                <div class="muted-text">Section Scores</div>
+                <div class="fw-semibold">Experience: {{ r.section_scores.experience|floatformat:2 }}</div>
+                <div class="fw-semibold">Projects: {{ r.section_scores.projects|floatformat:2 }}</div>
+                <div class="fw-semibold">Education: {{ r.section_scores.education|floatformat:2 }}</div>
             </div>
-            <div class="col-md-6">
-                <div class="muted-text">Missing Skills</div>
+            <div class="col-lg-4">
+                <div class="muted-text">Must-have Coverage</div>
+                <div class="fw-semibold">{{ r.matched_must_count }}/{{ r.must_skills|length }} required skills</div>
+                <div class="muted-text mt-2">Nice-to-have Coverage</div>
+                <div class="fw-semibold">{{ r.matched_nice_count }}/{{ r.nice_skills|length }} preferred skills</div>
+                <div class="muted-text mt-2">Matched Skills</div>
+                <div class="fw-semibold">{{ r.matched_skills }}</div>
+                <div class="muted-text mt-2">Missing Skills</div>
                 <div class="fw-semibold">{{ r.missing_skills }}</div>
+            </div>
+            <div class="col-lg-4">
+                <div class="muted-text">Fit Summary</div>
+                <ul class="mb-3">
+                    {% for bullet in r.fit_summary %}
+                        <li class="small">{{ bullet }}</li>
+                    {% endfor %}
+                </ul>
+                <div class="muted-text">Gap Analysis</div>
+                <ul class="mb-0">
+                    {% for gap in r.gap_analysis %}
+                        <li class="small">{{ gap }}</li>
+                    {% endfor %}
+                </ul>
             </div>
         </div>
     </td>

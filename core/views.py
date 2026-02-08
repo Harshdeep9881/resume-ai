@@ -5,7 +5,8 @@ from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 from .models import Job, Resume
 from .utils import extract_text_from_pdf
-from .embeddings import compute_similarity, extract_skills
+from .embeddings import compute_similarity
+from .scoring import classify_job_requirements, score_resume
 from .skills import SKILL_LIST
 
 
@@ -58,13 +59,19 @@ def upload_resumes(request, job_id):
     if request.method == "POST":
         files = request.FILES.getlist("resumes")
 
+        precomputed = classify_job_requirements(job.description, job.skills)
+
         for file in files:
             text = extract_text_from_pdf(file)
 
-            if job.skills:
-                resume_skills = extract_skills(text)
-                matched = list(set(job.skills) & set(resume_skills))
-                score = round(len(matched) / len(job.skills), 4) if job.skills else 0.0
+            if job.skills or job.description:
+                analysis = score_resume(
+                    job.description,
+                    text,
+                    selected_skills=job.skills,
+                    precomputed=precomputed,
+                )
+                score = analysis["overall_score"]
             else:
                 score = compute_similarity(job.description, text)
 
@@ -83,33 +90,28 @@ def upload_resumes(request, job_id):
 def results(request, job_id):
     job = Job.objects.get(id=job_id)
 
-    # Extract skills from job description once
-    try:
-        if job.skills:
-            job_skills = job.skills
-        else:
-            job_skills = extract_skills(job.description)
-    except:
-        job_skills = []
+    precomputed = classify_job_requirements(job.description, job.skills)
 
-
-    resumes = list(Resume.objects.filter(job=job).order_by("-similarity_score"))
+    resumes = list(Resume.objects.filter(job=job))
 
     for r in resumes:
-        # Extract skills from each resume
-        try:
-            resume_skills = extract_skills(r.extracted_text)
-        except:
-            resume_skills = []
+        analysis = score_resume(
+            job.description,
+            r.extracted_text or "",
+            selected_skills=job.skills,
+            precomputed=precomputed,
+        )
 
-
-        # Compute matched & missing skills
-        matched = list(set(job_skills) & set(resume_skills))
-        missing = list(set(job_skills) - set(resume_skills))
-
-        # Attach to object for template
-        r.matched_skills = ", ".join(matched) if matched else "None"
-        r.missing_skills = ", ".join(missing) if missing else "None"
+        r.similarity_score = analysis["overall_score"]
+        r.section_scores = analysis["section_scores"]
+        r.matched_skills = ", ".join(analysis["matched_skills"]) if analysis["matched_skills"] else "None"
+        r.missing_skills = ", ".join(analysis["missing_skills"]) if analysis["missing_skills"] else "None"
+        r.must_skills = analysis["must_skills"]
+        r.nice_skills = analysis["nice_skills"]
+        r.matched_must_count = max(len(analysis["must_skills"]) - len(analysis["missing_skills"]), 0)
+        r.matched_nice_count = max(len(analysis["matched_skills"]) - r.matched_must_count, 0)
+        r.fit_summary = analysis["fit_summary"]
+        r.gap_analysis = analysis["gap_analysis"]
 
         # Status logic
         if r.similarity_score >= 0.75:
@@ -119,6 +121,8 @@ def results(request, job_id):
         else:
             r.status = "Rejected"
 
+    resumes.sort(key=lambda resume: resume.similarity_score, reverse=True)
+
     return render(request, "core/results.html", {
         "resumes": resumes,
         "job": job,
@@ -127,6 +131,7 @@ def results(request, job_id):
 
 def dashboard(request, job_id):
     job = Job.objects.get(id=job_id)
+    precomputed = classify_job_requirements(job.description, job.skills)
     resumes = list(Resume.objects.filter(job=job))
     total_resumes = len(resumes)
     shortlisted_count = 0
@@ -134,6 +139,13 @@ def dashboard(request, job_id):
     score_sum = 0.0
 
     for r in resumes:
+        analysis = score_resume(
+            job.description,
+            r.extracted_text or "",
+            selected_skills=job.skills,
+            precomputed=precomputed,
+        )
+        r.similarity_score = analysis["overall_score"]
         if r.similarity_score >= 0.75:
             shortlisted_count += 1
         elif r.similarity_score < 0.50:
@@ -159,10 +171,22 @@ from openpyxl.styles import Font
 def download_excel(request, job_id):
     job = Job.objects.get(id=job_id)
 
-    shortlisted = Resume.objects.filter(
-        job=job,
-        similarity_score__gte=0.75
-    ).order_by("-similarity_score")
+    precomputed = classify_job_requirements(job.description, job.skills)
+    resumes = list(Resume.objects.filter(job=job))
+    shortlisted = []
+
+    for r in resumes:
+        analysis = score_resume(
+            job.description,
+            r.extracted_text or "",
+            selected_skills=job.skills,
+            precomputed=precomputed,
+        )
+        r.similarity_score = analysis["overall_score"]
+        if r.similarity_score >= 0.75:
+            shortlisted.append(r)
+
+    shortlisted.sort(key=lambda resume: resume.similarity_score, reverse=True)
 
     wb = openpyxl.Workbook()
     ws = wb.active
