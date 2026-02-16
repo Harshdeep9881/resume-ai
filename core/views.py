@@ -139,6 +139,60 @@ def results(request, job_id):
     })
 
 
+def compare_candidates(request, job_id):
+    job = Job.objects.get(id=job_id)
+    precomputed = classify_job_requirements(job.description, job.skills)
+    resumes = list(Resume.objects.filter(job=job))
+
+    compared = []
+    for r in resumes:
+        analysis = score_resume(
+            job.description,
+            r.extracted_text or "",
+            selected_skills=job.skills,
+            precomputed=precomputed,
+        )
+
+        score = analysis["overall_score"]
+        missing = analysis["missing_skills"]
+        must_skills = analysis["must_skills"]
+
+        if must_skills and not missing:
+            status = "Shortlisted"
+        elif score >= 0.75:
+            status = "Shortlisted"
+        elif score >= 0.50:
+            status = "Review"
+        else:
+            status = "Rejected"
+
+        matched_skills = analysis["matched_skills"]
+        compared.append({
+            "name": r.file.name.split("/")[-1],
+            "score": score,
+            "status": status,
+            "section_scores": analysis["section_scores"],
+            "matched_skills": matched_skills,
+            "missing_skills": missing,
+            "must_skills": must_skills,
+            "nice_skills": analysis["nice_skills"],
+            "fit_summary": analysis["fit_summary"],
+            "gap_analysis": analysis["gap_analysis"],
+            "matched_must_count": max(len(must_skills) - len(missing), 0),
+            "matched_nice_count": max(
+                len(matched_skills) - max(len(must_skills) - len(missing), 0), 0
+            ),
+        })
+
+    compared.sort(key=lambda candidate: candidate["score"], reverse=True)
+    top_candidates = compared[:4]
+
+    return render(request, "core/compare.html", {
+        "job": job,
+        "candidates": top_candidates,
+    })
+
+
 def dashboard(request, job_id):
     job = Job.objects.get(id=job_id)
     precomputed = classify_job_requirements(job.description, job.skills)

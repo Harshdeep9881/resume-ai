@@ -48,9 +48,14 @@
                 <h3 class="mb-2">Results for: {{ job.title }}</h3>
                 <p class="muted-text mb-0">AI-ranked candidates based on job match.</p>
             </div>
-            <a href="{% url 'dashboard' job.id %}" class="btn btn-outline-dark">
-                View Candidate Dashboard
-            </a>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'compare_candidates' job.id %}" class="btn btn-primary">
+                    Compare Candidates
+                </a>
+                <a href="{% url 'dashboard' job.id %}" class="btn btn-outline-dark">
+                    View Candidate Dashboard
+                </a>
+            </div>
         </div>
     </div>
 
@@ -79,9 +84,9 @@
     </td>
 
     <td>
-    {% if r.similarity_score >= 0.75 %}
+    {% if r.status == "Shortlisted" %}
         <span class="badge bg-success">Shortlisted</span>
-    {% elif r.similarity_score >= 0.50 %}
+    {% elif r.status == "Review" %}
         <span class="badge bg-warning text-dark">Review</span>
     {% else %}
         <span class="badge bg-danger">Rejected</span>

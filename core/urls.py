@@ -7,5 +7,6 @@ urlpatterns = [
     path('upload-resumes/<int:job_id>/', views.upload_resumes, name="upload_resumes"),
     path('dashboard/<int:job_id>/', views.dashboard, name="dashboard"),
     path('results/<int:job_id>/', views.results, name="results"),
+    path('compare/<int:job_id>/', views.compare_candidates, name="compare_candidates"),
     path('download-excel/<int:job_id>/', views.download_excel, name="download_excel"),
 ]

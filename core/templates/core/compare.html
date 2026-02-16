@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Candidate Comparison</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Source+Sans+3:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% load static %}
+    <link href="{% static 'core/style.css' %}" rel="stylesheet">
+</head>
+<body class="app-body">
+
+<div class="container app-shell">
+    <div class="app-nav mb-4">
+        <div class="brand-mark">
+            <span class="brand-dot"></span>
+            <span>AI Resume Analyzer</span>
+        </div>
+        <a href="{% url 'results' job.id %}" class="btn btn-outline-dark">Back to Results</a>
+    </div>
+
+    <div class="hero-card mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <h3 class="mb-2">Candidate Comparison Matrix</h3>
+                <p class="muted-text mb-0">{{ job.title }}</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <span class="stat-pill">Top {{ candidates|length }} profiles</span>
+                <span class="stat-pill">Side-by-side score breakdown</span>
+            </div>
+        </div>
+    </div>
+
+    {% if not candidates %}
+        <div class="app-card">
+            <p class="mb-0">No candidates available to compare yet.</p>
+        </div>
+    {% else %}
+        <div class="app-card compare-wrap">
+            <div class="compare-toolbar">
+                <div class="muted-text small mb-0">Scroll horizontally to review all compared candidates.</div>
+            </div>
+            <div class="compare-table">
+                <div class="compare-labels">
+                    <div class="compare-label">Candidate</div>
+                    <div class="compare-label">Overall Score</div>
+                    <div class="compare-label">Section Scores</div>
+                    <div class="compare-label">Must-have Coverage</div>
+                    <div class="compare-label">Nice-to-have Coverage</div>
+                    <div class="compare-label">Matched Skills</div>
+                    <div class="compare-label">Missing Skills</div>
+                    <div class="compare-label">Fit Summary</div>
+                    <div class="compare-label">Gap Analysis</div>
+                </div>
+
+                {% for c in candidates %}
+                    <div class="compare-column">
+                        <div class="compare-cell compare-candidate-cell">
+                            <div class="d-flex align-items-start justify-content-between gap-2">
+                                <div>
+                                    <div class="fw-semibold compare-name">{{ c.name }}</div>
+                                    <div class="small muted-text">Candidate profile</div>
+                                </div>
+                                <span class="compare-rank">#{{ forloop.counter }}</span>
+                            </div>
+                            {% if c.status == "Shortlisted" %}
+                                <span class="badge bg-success mt-2">Shortlisted</span>
+                            {% elif c.status == "Review" %}
+                                <span class="badge bg-warning text-dark mt-2">Review</span>
+                            {% else %}
+                                <span class="badge bg-danger mt-2">Rejected</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="compare-cell">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="score-chip mb-0">{{ c.score|floatformat:2 }}</div>
+                                <div class="small muted-text">Match score</div>
+                            </div>
+                            <div class="score-bar" style="--score: {{ c.score|floatformat:2 }};">
+                                <span></span>
+                            </div>
+                        </div>
+
+                        <div class="compare-cell">
+                            <div class="compare-score-row">
+                                <div class="small fw-semibold mb-1">Experience <span class="muted-text">{{ c.section_scores.experience|floatformat:2 }}</span></div>
+                                <div class="score-bar" style="--score: {{ c.section_scores.experience|floatformat:2 }};"><span></span></div>
+                            </div>
+                            <div class="compare-score-row">
+                                <div class="small fw-semibold mb-1">Projects <span class="muted-text">{{ c.section_scores.projects|floatformat:2 }}</span></div>
+                                <div class="score-bar" style="--score: {{ c.section_scores.projects|floatformat:2 }};"><span></span></div>
+                            </div>
+                            <div class="compare-score-row">
+                                <div class="small fw-semibold mb-1">Education <span class="muted-text">{{ c.section_scores.education|floatformat:2 }}</span></div>
+                                <div class="score-bar" style="--score: {{ c.section_scores.education|floatformat:2 }};"><span></span></div>
+                            </div>
+                        </div>
+
+                        <div class="compare-cell">
+                            <div class="fw-semibold">{{ c.matched_must_count }}/{{ c.must_skills|length }} required skills</div>
+                            {% if c.must_skills|length %}
+                                {% widthratio c.matched_must_count c.must_skills|length 100 as must_pct %}
+                            {% else %}
+                                {% widthratio 0 1 100 as must_pct %}
+                            {% endif %}
+                            <div class="compare-progress mt-2"><span style="width: {{ must_pct }}%;"></span></div>
+                        </div>
+
+                        <div class="compare-cell">
+                            <div class="fw-semibold">{{ c.matched_nice_count }}/{{ c.nice_skills|length }} preferred skills</div>
+                            {% if c.nice_skills|length %}
+                                {% widthratio c.matched_nice_count c.nice_skills|length 100 as nice_pct %}
+                            {% else %}
+                                {% widthratio 0 1 100 as nice_pct %}
+                            {% endif %}
+                            <div class="compare-progress mt-2"><span style="width: {{ nice_pct }}%;"></span></div>
+                        </div>
+
+                        <div class="compare-cell">
+                            {% if c.matched_skills %}
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% for skill in c.matched_skills %}
+                                        <span class="compare-tag">{{ skill }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <span class="muted-text">None</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="compare-cell">
+                            {% if c.missing_skills %}
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% for skill in c.missing_skills %}
+                                        <span class="compare-tag compare-tag-missing">{{ skill }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <span class="muted-text">None</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="compare-cell">
+                            <ul class="small mb-0 compare-list">
+                                {% for point in c.fit_summary %}
+                                    <li>{{ point }}</li>
+                                {% empty %}
+                                    <li>No fit summary available.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+
+                        <div class="compare-cell">
+                            <ul class="small mb-0 compare-list">
+                                {% for point in c.gap_analysis %}
+                                    <li>{{ point }}</li>
+                                {% empty %}
+                                    <li>No gaps detected.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+</body>
+</html>
