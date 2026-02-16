@@ -21,6 +21,7 @@
         <div class="d-flex align-items-center gap-2">
             {% if request.user.is_authenticated %}
                 <a href="/upload-job/" class="btn btn-outline-dark">Start New Shortlist</a>
+                <a href="{% url 'setup_job_v2' %}" class="btn btn-primary">Launch V2 Hiring Flow</a>
                 <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-outline-dark">Logout</button>
@@ -28,6 +29,7 @@
             {% else %}
                 <a href="{% url 'login' %}" class="btn btn-primary">HR Login</a>
                 <a href="/upload-job/" class="btn btn-outline-dark">Start New Shortlist</a>
+                <a href="{% url 'setup_job_v2' %}" class="btn btn-outline-dark">Explore V2</a>
             {% endif %}
         </div>
     </div>
@@ -43,7 +45,7 @@
                 </p>
                 <div class="d-flex flex-wrap gap-3">
                     <a href="/upload-job/" class="btn btn-primary btn-lg">Start Hiring</a>
-                    <a href="/upload-job/" class="btn btn-outline-dark btn-lg">See How It Works</a>
+                    <a href="{% url 'setup_job_v2' %}" class="btn btn-outline-dark btn-lg">Try V2 Multi-Signal</a>
                 </div>
             </div>
             <div class="col-lg-5">

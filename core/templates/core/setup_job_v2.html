@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Setup Job V2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Source+Sans+3:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% load static %}
+    <link href="{% static 'core/style.css' %}" rel="stylesheet">
+</head>
+<body class="app-body">
+<div class="container app-shell">
+    <div class="app-nav mb-4">
+        <div class="brand-mark">
+            <span class="brand-dot"></span>
+            <span>AI Resume Analyzer V2</span>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'home' %}" class="btn btn-outline-dark">Home</a>
+            <a href="{% url 'upload_job' %}" class="btn btn-outline-dark">Legacy Flow</a>
+        </div>
+    </div>
+
+    {% if messages %}
+        <div class="alert alert-warning mb-4">
+            {% for message in messages %}
+                <div>{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="app-card">
+                <h3 class="mb-2">Create Job (Multi-Signal)</h3>
+                <p class="muted-text mb-4">Define role metadata, scoring weights, requirements, and dynamic screening questions.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Job Title</label>
+                            <input class="form-control" name="title" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Location</label>
+                            <input class="form-control" name="location" placeholder="Remote / City">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Employment Type</label>
+                            <select class="form-select" name="employment_type">
+                                <option value="">Select</option>
+                                <option value="full_time">Full Time</option>
+                                <option value="contract">Contract</option>
+                                <option value="internship">Internship</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Minimum Experience (years)</label>
+                            <input type="number" min="0" class="form-control" name="min_experience_years">
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label">Job Description</label>
+                        <textarea class="form-control" rows="6" name="description" required></textarea>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label">Select Skills</label>
+                        <div class="skill-input" data-skill-input>
+                            <div class="skill-tags" id="skill-tags"></div>
+                            <input type="text" id="skill-input" class="skill-field" placeholder="Type a skill">
+                            <input type="hidden" name="skills_json" id="skills-json" value="[]">
+                            <div class="skill-suggestions" id="skill-suggestions"></div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label class="form-label">Must-have Requirements (one per line)</label>
+                            <textarea class="form-control" rows="5" name="must_requirements"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nice-to-have Requirements (one per line)</label>
+                            <textarea class="form-control" rows="5" name="nice_requirements"></textarea>
+                        </div>
+                    </div>
+
+                    <h5 class="mt-4">Scoring Weights (must total 100)</h5>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Skills Evidence</label>
+                            <input type="number" min="0" max="100" class="form-control" name="weight_skills_evidence" value="25" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Problem Solving</label>
+                            <input type="number" min="0" max="100" class="form-control" name="weight_problem_solving" value="30" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Role Fit</label>
+                            <input type="number" min="0" max="100" class="form-control" name="weight_role_fit" value="30" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Work Style</label>
+                            <input type="number" min="0" max="100" class="form-control" name="weight_work_style" value="15" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label class="form-label">Shortlist Threshold</label>
+                            <input type="number" class="form-control" name="shortlist_threshold" value="70" step="0.01">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Review Threshold</label>
+                            <input type="number" class="form-control" name="review_threshold" value="50" step="0.01">
+                        </div>
+                    </div>
+
+                    <h5 class="mt-4">Screening Questions</h5>
+                    <input type="hidden" name="questions_json" id="questions-json" value="[]">
+                    <div id="question-list" class="d-flex flex-column gap-3"></div>
+                    <button type="button" class="btn btn-outline-dark mt-3" id="add-question-btn">Add Question</button>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">Create Job and Open Pipeline</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="app-card">
+                <h5 class="mb-3">What HR gets in V2</h5>
+                <div class="d-flex flex-column gap-3">
+                    <div class="step-card"><h6>Custom questions</h6><p class="muted-text mb-0">Add role-specific and knockout prompts.</p></div>
+                    <div class="step-card"><h6>Weighted scoring</h6><p class="muted-text mb-0">Tune shortlist behavior per role.</p></div>
+                    <div class="step-card"><h6>Public apply link</h6><p class="muted-text mb-0">Share one URL to collect resumes and evidence.</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ skill_list|json_script:"skill-data" }}
+<script>
+    const skillList = JSON.parse(document.getElementById("skill-data").textContent);
+    const skillInput = document.getElementById("skill-input");
+    const skillTags = document.getElementById("skill-tags");
+    const suggestions = document.getElementById("skill-suggestions");
+    const skillsJson = document.getElementById("skills-json");
+    const selected = new Set();
+
+    function syncSkills() {
+        skillsJson.value = JSON.stringify(Array.from(selected));
+    }
+
+    function addTag(skill) {
+        if (!skill || selected.has(skill)) return;
+        selected.add(skill);
+        const chip = document.createElement("span");
+        chip.className = "skill-chip";
+        chip.textContent = skill;
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "skill-remove";
+        remove.textContent = "x";
+        remove.onclick = () => {
+            selected.delete(skill);
+            chip.remove();
+            syncSkills();
+        };
+        chip.appendChild(remove);
+        skillTags.appendChild(chip);
+        syncSkills();
+    }
+
+    function renderSuggestions(matches) {
+        suggestions.innerHTML = "";
+        if (!matches.length) {
+            suggestions.classList.remove("show");
+            return;
+        }
+        matches.forEach((skill) => {
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "skill-suggestion";
+            item.textContent = skill;
+            item.onclick = () => {
+                addTag(skill);
+                skillInput.value = "";
+                renderSuggestions([]);
+            };
+            suggestions.appendChild(item);
+        });
+        suggestions.classList.add("show");
+    }
+
+    skillInput.addEventListener("input", (event) => {
+        const query = event.target.value.trim().toLowerCase();
+        if (!query) return renderSuggestions([]);
+        const matches = skillList
+            .filter((skill) => !selected.has(skill))
+            .filter((skill) => skill.toLowerCase().includes(query))
+            .slice(0, 8);
+        renderSuggestions(matches);
+    });
+
+    skillInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            const value = skillInput.value.trim();
+            if (value) addTag(value);
+            skillInput.value = "";
+            renderSuggestions([]);
+        }
+    });
+
+    const questions = [];
+    const questionList = document.getElementById("question-list");
+    const questionsJson = document.getElementById("questions-json");
+
+    function syncQuestions() {
+        questionsJson.value = JSON.stringify(questions);
+    }
+
+    function renderQuestions() {
+        questionList.innerHTML = "";
+        questions.forEach((q, index) => {
+            const wrap = document.createElement("div");
+            wrap.className = "step-card";
+            wrap.innerHTML = `
+                <div class="row g-2">
+                    <div class="col-md-5">
+                        <label class="form-label">Prompt</label>
+                        <input type="text" class="form-control q-prompt" value="${q.prompt || ""}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Type</label>
+                        <select class="form-select q-type">
+                            <option value="short_text">Short</option>
+                            <option value="long_text">Long</option>
+                            <option value="number">Number</option>
+                            <option value="url">URL</option>
+                            <option value="knockout_bool">Yes/No</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Bucket</label>
+                        <select class="form-select q-bucket">
+                            <option value="">None</option>
+                            <option value="skills_evidence">Skills</option>
+                            <option value="problem_solving">Problem</option>
+                            <option value="role_fit">Role Fit</option>
+                            <option value="work_style">Work Style</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Knockout value</label>
+                        <input type="text" class="form-control q-knockout" value="${q.knockout_value || ""}" placeholder="e.g. yes">
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger w-100 q-delete">Del</button>
+                    </div>
+                </div>
+                <div class="mt-2 d-flex gap-4">
+                    <label><input type="checkbox" class="q-required" ${q.is_required ? "checked" : ""}> Required</label>
+                    <label><input type="checkbox" class="q-is-knockout" ${q.is_knockout ? "checked" : ""}> Knockout</label>
+                </div>
+            `;
+            wrap.querySelector(".q-type").value = q.question_type || "short_text";
+            wrap.querySelector(".q-bucket").value = q.bucket || "";
+
+            wrap.querySelector(".q-prompt").oninput = (e) => { q.prompt = e.target.value; syncQuestions(); };
+            wrap.querySelector(".q-type").onchange = (e) => { q.question_type = e.target.value; syncQuestions(); };
+            wrap.querySelector(".q-bucket").onchange = (e) => { q.bucket = e.target.value; syncQuestions(); };
+            wrap.querySelector(".q-knockout").oninput = (e) => { q.knockout_value = e.target.value; syncQuestions(); };
+            wrap.querySelector(".q-required").onchange = (e) => { q.is_required = e.target.checked; syncQuestions(); };
+            wrap.querySelector(".q-is-knockout").onchange = (e) => { q.is_knockout = e.target.checked; syncQuestions(); };
+            wrap.querySelector(".q-delete").onclick = () => {
+                questions.splice(index, 1);
+                renderQuestions();
+                syncQuestions();
+            };
+            questionList.appendChild(wrap);
+        });
+    }
+
+    document.getElementById("add-question-btn").onclick = () => {
+        questions.push({
+            prompt: "",
+            question_type: "short_text",
+            bucket: "",
+            is_required: true,
+            is_knockout: false,
+            knockout_value: ""
+        });
+        renderQuestions();
+        syncQuestions();
+    };
+
+    syncSkills();
+    syncQuestions();
+</script>
+</body>
+</html>

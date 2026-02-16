@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pipeline - {{ job.title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Source+Sans+3:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% load static %}
+    <link href="{% static 'core/style.css' %}" rel="stylesheet">
+</head>
+<body class="app-body">
+<div class="container app-shell">
+    <div class="app-nav mb-4">
+        <div class="brand-mark">
+            <span class="brand-dot"></span>
+            <span>{{ job.title }} Pipeline</span>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'home' %}" class="btn btn-outline-dark">Home</a>
+            <a href="{% url 'candidate_apply' job.id %}" class="btn btn-primary">Open Candidate Form</a>
+        </div>
+    </div>
+
+    <div class="hero-card mb-4">
+        <h4 class="mb-2">Share this candidate apply link</h4>
+        <div class="p-3 rounded border bg-light">
+            <code>{{ apply_url }}</code>
+        </div>
+    </div>
+
+    <div class="app-card">
+        <h4 class="mb-3">Candidates ({{ candidates|length }})</h4>
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr class="text-uppercase text-muted small">
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Score</th>
+                    <th>Recommendation</th>
+                    <th>Confidence</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for candidate in candidates %}
+                <tr>
+                    <td class="fw-semibold">{{ candidate.full_name }}</td>
+                    <td>{{ candidate.email }}</td>
+                    <td>
+                        {% if candidate.evaluation %}
+                            {{ candidate.evaluation.final_score }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if candidate.evaluation %}
+                            {{ candidate.evaluation.get_recommendation_display }}
+                        {% else %}
+                            Pending
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if candidate.evaluation %}
+                            {{ candidate.evaluation.get_confidence_display }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ candidate.created_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="muted-text">No candidates yet. Share the apply link.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
