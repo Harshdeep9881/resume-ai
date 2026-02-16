@@ -30,6 +30,55 @@
         </div>
     </div>
 
+    <div class="results-summary mb-4">
+        <div class="summary-tile">
+            <div class="muted-text small">Avg Score</div>
+            <strong>{{ avg_score }}</strong>
+        </div>
+        <div class="summary-tile">
+            <div class="muted-text small">Shortlist</div>
+            <strong>{{ shortlist_count }}</strong>
+        </div>
+        <div class="summary-tile">
+            <div class="muted-text small">Hold</div>
+            <strong>{{ hold_count }}</strong>
+        </div>
+        <div class="summary-tile">
+            <div class="muted-text small">Reject</div>
+            <strong>{{ reject_count }}</strong>
+        </div>
+    </div>
+
+    <div class="app-card mb-4">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label">Search</label>
+                <input type="text" class="form-control" name="search" value="{{ search }}" placeholder="Candidate name or email">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Recommendation</label>
+                <select class="form-select" name="recommendation">
+                    <option value="">All</option>
+                    <option value="yes" {% if recommendation_filter == "yes" %}selected{% endif %}>Yes</option>
+                    <option value="hold" {% if recommendation_filter == "hold" %}selected{% endif %}>Hold</option>
+                    <option value="no" {% if recommendation_filter == "no" %}selected{% endif %}>No</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Confidence</label>
+                <select class="form-select" name="confidence">
+                    <option value="">All</option>
+                    <option value="high" {% if confidence_filter == "high" %}selected{% endif %}>High</option>
+                    <option value="medium" {% if confidence_filter == "medium" %}selected{% endif %}>Medium</option>
+                    <option value="low" {% if confidence_filter == "low" %}selected{% endif %}>Low</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-grid">
+                <button class="btn btn-primary" type="submit">Apply Filters</button>
+            </div>
+        </form>
+    </div>
+
     <div class="app-card">
         <h4 class="mb-3">Candidates ({{ candidates|length }})</h4>
         <table class="table table-hover align-middle mb-0">
@@ -41,6 +90,7 @@
                     <th>Recommendation</th>
                     <th>Confidence</th>
                     <th>Created</th>
+                    <th>Explain</th>
                 </tr>
             </thead>
             <tbody>
@@ -70,9 +120,12 @@
                         {% endif %}
                     </td>
                     <td>{{ candidate.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        <a href="{% url 'candidate_detail' job.id candidate.id %}" class="btn btn-sm btn-outline-dark">Open</a>
+                    </td>
                 </tr>
             {% empty %}
-                <tr><td colspan="6" class="muted-text">No candidates yet. Share the apply link.</td></tr>
+                <tr><td colspan="7" class="muted-text">No candidates yet. Share the apply link.</td></tr>
             {% endfor %}
             </tbody>
         </table>

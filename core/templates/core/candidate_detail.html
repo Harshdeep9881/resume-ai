@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Candidate Detail - {{ candidate.full_name }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Source+Sans+3:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% load static %}
+    <link href="{% static 'core/style.css' %}" rel="stylesheet">
+</head>
+<body class="app-body">
+<div class="container app-shell">
+    <div class="app-nav mb-4">
+        <div class="brand-mark">
+            <span class="brand-dot"></span>
+            <span>Candidate Explainability</span>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'job_pipeline' job.id %}" class="btn btn-outline-dark">Back to Pipeline</a>
+        </div>
+    </div>
+
+    {% if messages %}
+        <div class="alert alert-success mb-4">
+            {% for message in messages %}
+                <div>{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="hero-card mb-4">
+        <div class="row g-3">
+            <div class="col-lg-8">
+                <h3 class="mb-1">{{ candidate.full_name }}</h3>
+                <p class="muted-text mb-1">{{ candidate.email }}</p>
+                <p class="muted-text mb-0">{{ candidate.phone }} {% if candidate.current_location %}| {{ candidate.current_location }}{% endif %}</p>
+            </div>
+            <div class="col-lg-4">
+                {% if evaluation %}
+                    <div class="score-chip mb-2">Final Score: {{ evaluation.final_score }}</div>
+                    <div class="mb-2">Confidence: <strong>{{ evaluation.get_confidence_display }}</strong></div>
+                    <div>Recommendation: <strong>{{ evaluation.get_recommendation_display }}</strong></div>
+                {% else %}
+                    <div class="muted-text">No evaluation found.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if evaluation %}
+    <div class="row g-4 mb-4">
+        <div class="col-lg-7">
+            <div class="app-card h-100">
+                <h5 class="mb-3">Why this decision</h5>
+                <div class="mb-3">
+                    <div class="muted-text mb-1">Strengths</div>
+                    <ul class="mb-0">
+                        {% for item in evaluation.strengths %}
+                            <li>{{ item }}</li>
+                        {% empty %}
+                            <li class="muted-text">No strengths recorded.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <div class="muted-text mb-1">Gaps</div>
+                    <ul class="mb-0">
+                        {% for item in evaluation.gaps %}
+                            <li>{{ item }}</li>
+                        {% empty %}
+                            <li class="muted-text">No gaps recorded.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div>
+                    <div class="muted-text mb-1">Missing Evidence</div>
+                    <ul class="mb-0">
+                        {% for item in evaluation.missing_evidence %}
+                            <li>{{ item }}</li>
+                        {% empty %}
+                            <li class="muted-text">No missing evidence recorded.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="app-card h-100">
+                <h5 class="mb-3">Override Recommendation</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <label class="form-label">HR Decision</label>
+                    <select class="form-select mb-3" name="recommendation">
+                        <option value="yes" {% if evaluation.recommendation == "yes" %}selected{% endif %}>Yes</option>
+                        <option value="hold" {% if evaluation.recommendation == "hold" %}selected{% endif %}>Hold</option>
+                        <option value="no" {% if evaluation.recommendation == "no" %}selected{% endif %}>No</option>
+                    </select>
+                    <button class="btn btn-primary" type="submit">Save Decision</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-card mb-4">
+        <h5 class="mb-3">Bucket Score Breakdown</h5>
+        <div class="d-flex flex-column gap-3">
+            {% for bucket in bucket_scores %}
+                <div class="bucket-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="fw-semibold">{{ bucket.get_bucket_display }}</div>
+                        <div class="small muted-text">Raw {{ bucket.raw_score }} / 5 | Weighted {{ bucket.weighted_score }}</div>
+                    </div>
+                    <div class="score-bar mt-2" style="--score: {{ bucket.raw_score|floatformat:2 }};">
+                        <span></span>
+                    </div>
+                    <div class="muted-text small mt-2">{{ bucket.rationale }}</div>
+                </div>
+            {% empty %}
+                <div class="muted-text">No bucket scores available.</div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="app-card h-100">
+                <h5 class="mb-3">Screening Answers</h5>
+                <div class="d-flex flex-column gap-3">
+                    {% for answer in answers %}
+                        <div class="step-card">
+                            <div class="small muted-text">Q{{ forloop.counter }}</div>
+                            <div class="fw-semibold">{{ answer.question.prompt }}</div>
+                            <div class="mt-2">{{ answer.answer_text|default:"-" }}</div>
+                        </div>
+                    {% empty %}
+                        <div class="muted-text">No answers recorded.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="app-card h-100 mb-4">
+                <h5 class="mb-3">Knockout Checks</h5>
+                {% for result in knockout_results %}
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div>
+                            <div class="fw-semibold">{{ result.question.prompt }}</div>
+                            {% if result.reason %}<div class="small muted-text">{{ result.reason }}</div>{% endif %}
+                        </div>
+                        <span class="badge {% if result.passed %}bg-success{% else %}bg-danger{% endif %}">
+                            {% if result.passed %}Pass{% else %}Fail{% endif %}
+                        </span>
+                    </div>
+                {% empty %}
+                    <div class="muted-text">No knockout questions in this job.</div>
+                {% endfor %}
+            </div>
+            <div class="app-card h-100">
+                <h5 class="mb-3">Artifacts & Resume</h5>
+                {% if candidate_resume and candidate_resume.file %}
+                    <div class="mb-2">
+                        <span class="muted-text">Resume:</span>
+                        <a href="{{ candidate_resume.file.url }}" target="_blank">{{ candidate_resume.file.name }}</a>
+                    </div>
+                {% endif %}
+                <div class="d-flex flex-column gap-2">
+                    {% for artifact in artifacts %}
+                        <div class="step-card">
+                            <div class="fw-semibold">{{ artifact.get_artifact_type_display }}</div>
+                            {% if artifact.url %}<div><a href="{{ artifact.url }}" target="_blank">{{ artifact.url }}</a></div>{% endif %}
+                            {% if artifact.file %}<div><a href="{{ artifact.file.url }}" target="_blank">{{ artifact.file.name }}</a></div>{% endif %}
+                            {% if artifact.notes %}<div class="muted-text small mt-1">{{ artifact.notes }}</div>{% endif %}
+                        </div>
+                    {% empty %}
+                        <div class="muted-text">No artifacts submitted.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

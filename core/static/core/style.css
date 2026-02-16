@@ -314,6 +314,13 @@ body.app-body {
   color: var(--ink-500);
 }
 
+.bucket-card {
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 12px;
+  background: #fff;
+}
+
 .compare-wrap {
   padding: 0;
   overflow-x: auto;

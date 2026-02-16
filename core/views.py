@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
+from django.db.models import Q
 from django.urls import reverse
 from .models import (
     BucketScore,
@@ -523,12 +524,18 @@ def candidate_apply(request, job_id):
 
         answered_required = 0
         total_required = 0
+        missing_required_questions = []
         for q in questions:
             if q.is_required:
                 total_required += 1
                 if request.POST.get(f"question_{q.id}", "").strip():
                     answered_required += 1
+                else:
+                    missing_required_questions.append(q.prompt)
         answer_ratio = (answered_required / total_required) if total_required else 1.0
+
+        knockout_results = list(candidate.knockout_results.select_related("question"))
+        failed_knockouts = [result.question.prompt for result in knockout_results if not result.passed]
 
         if knockout_failed:
             recommendation = "no"
@@ -544,27 +551,75 @@ def candidate_apply(request, job_id):
             recommendation = "no"
             confidence = "low"
 
+        matched_skills = analysis.get("matched_skills", [])
+        missing_skills = analysis.get("missing_skills", [])
+        fit_summary = analysis.get("fit_summary", [])
+        gap_analysis = analysis.get("gap_analysis", [])
+
+        strengths = []
+        if matched_skills:
+            strengths.append(f"Matched skills: {', '.join(matched_skills[:8])}")
+        if fit_summary:
+            strengths.extend(fit_summary[:2])
+        if answer_ratio >= 0.8:
+            strengths.append("Most required screening questions were answered.")
+
+        gaps = []
+        if missing_skills:
+            gaps.append(f"Missing skills: {', '.join(missing_skills[:8])}")
+        if gap_analysis:
+            gaps.extend(gap_analysis[:2])
+        if failed_knockouts:
+            gaps.append(f"Knockout failed: {failed_knockouts[0]}")
+
+        missing_evidence = []
+        if missing_required_questions:
+            missing_evidence.append(
+                f"Required answers missing: {min(len(missing_required_questions), 5)} question(s)."
+            )
+        if not candidate.artifacts.exists():
+            missing_evidence.append("No portfolio/artifact evidence submitted.")
+        if not strengths:
+            strengths = ["Insufficient high-confidence evidence yet."]
+        if not gaps:
+            gaps = ["No major role-fit gaps identified from current signals."]
+        if not missing_evidence:
+            missing_evidence = ["No major missing evidence identified."]
+
         evaluation = CandidateEvaluation.objects.create(
             candidate=candidate,
             final_score=round(final_score, 2),
             confidence=confidence,
             recommendation=recommendation,
-            strengths=[f"Matched skills: {', '.join(analysis.get('matched_skills', [])[:6]) or 'Limited evidence'}"],
-            gaps=analysis.get("gap_analysis", []),
-            missing_evidence=[
-                "Some required screening answers are missing."
-                if answer_ratio < 1.0
-                else "No major missing evidence identified."
-            ],
+            strengths=strengths,
+            gaps=gaps,
+            missing_evidence=missing_evidence,
         )
 
+        bucket_rationales = {
+            "skills_evidence": (
+                f"Resume skill alignment score derived from matched skills count ({len(matched_skills)} matched)."
+            ),
+            "problem_solving": (
+                "Based on completion of problem-solving tagged screening answers."
+            ),
+            "role_fit": (
+                "Blends role description similarity with requirement coverage and knockout outcomes."
+            ),
+            "work_style": (
+                "Based on work-style question completion and response coverage quality."
+            ),
+        }
         for bucket, raw_score in raw_scores.items():
             BucketScore.objects.create(
                 candidate_evaluation=evaluation,
                 bucket=bucket,
                 raw_score=round(raw_score, 1),
                 weighted_score=round(weighted_scores[bucket], 2),
-                rationale="Auto-scored from resume signal and screening completion.",
+                rationale=bucket_rationales.get(
+                    bucket,
+                    "Auto-scored from resume signal and screening completion.",
+                ),
             )
 
         return redirect("candidate_apply_success", job_id=job.id)
@@ -587,20 +642,89 @@ def candidate_apply_success(request, job_id):
 @login_required
 def job_pipeline(request, job_id):
     job = get_object_or_404(Job, id=job_id)
+    search = (request.GET.get("search") or "").strip()
+    recommendation_filter = (request.GET.get("recommendation") or "").strip()
+    confidence_filter = (request.GET.get("confidence") or "").strip()
+
     candidates = (
         Candidate.objects.filter(job=job)
         .select_related("evaluation")
         .order_by("-evaluation__final_score", "-created_at")
     )
+    if search:
+        candidates = candidates.filter(
+            Q(full_name__icontains=search) | Q(email__icontains=search)
+        )
+    if recommendation_filter in {"yes", "hold", "no"}:
+        candidates = candidates.filter(evaluation__recommendation=recommendation_filter)
+    if confidence_filter in {"low", "medium", "high"}:
+        candidates = candidates.filter(evaluation__confidence=confidence_filter)
+
+    metrics_qs = CandidateEvaluation.objects.filter(candidate__job=job)
+    shortlist_count = metrics_qs.filter(recommendation="yes").count()
+    hold_count = metrics_qs.filter(recommendation="hold").count()
+    reject_count = metrics_qs.filter(recommendation="no").count()
+    avg_score = round(
+        sum(float(item.final_score) for item in metrics_qs) / metrics_qs.count(), 2
+    ) if metrics_qs.exists() else 0
+
     return render(
         request,
         "core/job_pipeline.html",
         {
             "job": job,
             "candidates": candidates,
+            "search": search,
+            "recommendation_filter": recommendation_filter,
+            "confidence_filter": confidence_filter,
+            "shortlist_count": shortlist_count,
+            "hold_count": hold_count,
+            "reject_count": reject_count,
+            "avg_score": avg_score,
             "apply_url": request.build_absolute_uri(
                 reverse("candidate_apply", kwargs={"job_id": job.id})
             ),
+        },
+    )
+
+
+@login_required
+def candidate_detail(request, job_id, candidate_id):
+    job = get_object_or_404(Job, id=job_id)
+    candidate = get_object_or_404(
+        Candidate.objects.select_related("evaluation").prefetch_related(
+            "answers__question",
+            "artifacts",
+            "knockout_results__question",
+            "evaluation__bucket_scores",
+        ),
+        id=candidate_id,
+        job=job,
+    )
+    evaluation = getattr(candidate, "evaluation", None)
+    bucket_scores = evaluation.bucket_scores.all().order_by("-weighted_score") if evaluation else []
+    candidate_resume = CandidateResume.objects.filter(candidate=candidate).first()
+
+    if request.method == "POST" and evaluation:
+        new_recommendation = (request.POST.get("recommendation") or "").strip()
+        if new_recommendation in {"yes", "hold", "no"}:
+            evaluation.recommendation = new_recommendation
+            evaluation.save(update_fields=["recommendation"])
+            messages.success(request, "Recommendation updated successfully.")
+            return redirect("candidate_detail", job_id=job.id, candidate_id=candidate.id)
+
+    return render(
+        request,
+        "core/candidate_detail.html",
+        {
+            "job": job,
+            "candidate": candidate,
+            "candidate_resume": candidate_resume,
+            "evaluation": evaluation,
+            "bucket_scores": bucket_scores,
+            "answers": candidate.answers.all().order_by("question__order", "question__id"),
+            "artifacts": candidate.artifacts.all(),
+            "knockout_results": candidate.knockout_results.all().order_by("id"),
         },
     )
 
