@@ -430,6 +430,60 @@ body.app-body {
   margin-top: 0;
 }
 
+.v2-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.v2-sidebar {
+  position: sticky;
+  top: 18px;
+}
+
+.kanban-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.kanban-column h6 {
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.kanban-dropzone {
+  min-height: 120px;
+  border: 1px dashed rgba(148, 163, 184, 0.45);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(248, 250, 252, 0.8);
+  display: grid;
+  gap: 10px;
+}
+
+.kanban-dropzone.drop-active {
+  border-color: var(--brand-500);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.candidate-card {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  padding: 10px;
+  background: #fff;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+}
+
+.candidate-card[draggable="true"] {
+  cursor: grab;
+}
+
+.candidate-card.dragging {
+  opacity: 0.5;
+}
+
 @media (max-width: 768px) {
   .hero-card {
     padding: 24px;
@@ -456,5 +510,17 @@ body.app-body {
 
   .compare-toolbar {
     padding: 10px 12px;
+  }
+
+  .v2-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-sidebar {
+    position: static;
+  }
+
+  .kanban-grid {
+    grid-template-columns: 1fr;
   }
 }

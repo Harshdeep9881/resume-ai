@@ -10,6 +10,11 @@ urlpatterns = [
     path('apply/<int:job_id>/success/', views.candidate_apply_success, name="candidate_apply_success"),
     path('pipeline/<int:job_id>/', views.job_pipeline, name="job_pipeline"),
     path('pipeline/<int:job_id>/candidate/<int:candidate_id>/', views.candidate_detail, name="candidate_detail"),
+    path(
+        'pipeline/<int:job_id>/candidate/<int:candidate_id>/recommendation/',
+        views.update_candidate_recommendation,
+        name="update_candidate_recommendation",
+    ),
     path('dashboard/<int:job_id>/', views.dashboard, name="dashboard"),
     path('results/<int:job_id>/', views.results, name="results"),
     path('compare/<int:job_id>/', views.compare_candidates, name="compare_candidates"),

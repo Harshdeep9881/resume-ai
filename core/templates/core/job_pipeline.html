@@ -1,135 +1,285 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Pipeline - {{ job.title }}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Source+Sans+3:wght@400;500&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    {% load static %}
-    <link href="{% static 'core/style.css' %}" rel="stylesheet">
-</head>
-<body class="app-body">
-<div class="container app-shell">
-    <div class="app-nav mb-4">
-        <div class="brand-mark">
-            <span class="brand-dot"></span>
-            <span>{{ job.title }} Pipeline</span>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'home' %}" class="btn btn-outline-dark">Home</a>
-            <a href="{% url 'candidate_apply' job.id %}" class="btn btn-primary">Open Candidate Form</a>
-        </div>
-    </div>
+{% extends "core/base_v2.html" %}
 
-    <div class="hero-card mb-4">
-        <h4 class="mb-2">Share this candidate apply link</h4>
-        <div class="p-3 rounded border bg-light">
-            <code>{{ apply_url }}</code>
-        </div>
-    </div>
+{% block title %}Pipeline - {{ job.title }}{% endblock %}
 
-    <div class="results-summary mb-4">
-        <div class="summary-tile">
-            <div class="muted-text small">Avg Score</div>
-            <strong>{{ avg_score }}</strong>
-        </div>
-        <div class="summary-tile">
-            <div class="muted-text small">Shortlist</div>
-            <strong>{{ shortlist_count }}</strong>
-        </div>
-        <div class="summary-tile">
-            <div class="muted-text small">Hold</div>
-            <strong>{{ hold_count }}</strong>
-        </div>
-        <div class="summary-tile">
-            <div class="muted-text small">Reject</div>
-            <strong>{{ reject_count }}</strong>
-        </div>
-    </div>
-
-    <div class="app-card mb-4">
-        <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-5">
-                <label class="form-label">Search</label>
-                <input type="text" class="form-control" name="search" value="{{ search }}" placeholder="Candidate name or email">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Recommendation</label>
-                <select class="form-select" name="recommendation">
-                    <option value="">All</option>
-                    <option value="yes" {% if recommendation_filter == "yes" %}selected{% endif %}>Yes</option>
-                    <option value="hold" {% if recommendation_filter == "hold" %}selected{% endif %}>Hold</option>
-                    <option value="no" {% if recommendation_filter == "no" %}selected{% endif %}>No</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Confidence</label>
-                <select class="form-select" name="confidence">
-                    <option value="">All</option>
-                    <option value="high" {% if confidence_filter == "high" %}selected{% endif %}>High</option>
-                    <option value="medium" {% if confidence_filter == "medium" %}selected{% endif %}>Medium</option>
-                    <option value="low" {% if confidence_filter == "low" %}selected{% endif %}>Low</option>
-                </select>
-            </div>
-            <div class="col-md-2 d-grid">
-                <button class="btn btn-primary" type="submit">Apply Filters</button>
-            </div>
-        </form>
-    </div>
-
-    <div class="app-card">
-        <h4 class="mb-3">Candidates ({{ candidates|length }})</h4>
-        <table class="table table-hover align-middle mb-0">
-            <thead>
-                <tr class="text-uppercase text-muted small">
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Score</th>
-                    <th>Recommendation</th>
-                    <th>Confidence</th>
-                    <th>Created</th>
-                    <th>Explain</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for candidate in candidates %}
-                <tr>
-                    <td class="fw-semibold">{{ candidate.full_name }}</td>
-                    <td>{{ candidate.email }}</td>
-                    <td>
-                        {% if candidate.evaluation %}
-                            {{ candidate.evaluation.final_score }}
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if candidate.evaluation %}
-                            {{ candidate.evaluation.get_recommendation_display }}
-                        {% else %}
-                            Pending
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if candidate.evaluation %}
-                            {{ candidate.evaluation.get_confidence_display }}
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    <td>{{ candidate.created_at|date:"Y-m-d H:i" }}</td>
-                    <td>
-                        <a href="{% url 'candidate_detail' job.id candidate.id %}" class="btn btn-sm btn-outline-dark">Open</a>
-                    </td>
-                </tr>
-            {% empty %}
-                <tr><td colspan="7" class="muted-text">No candidates yet. Share the apply link.</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+{% block v2_content %}
+<div class="hero-card mb-4">
+    <h4 class="mb-2">{{ job.title }} Pipeline</h4>
+    <div class="p-3 rounded border bg-light">
+        <div class="small muted-text mb-1">Candidate apply link</div>
+        <code>{{ apply_url }}</code>
     </div>
 </div>
-</body>
-</html>
+
+<div class="results-summary mb-4">
+    <div class="summary-tile">
+        <div class="muted-text small">Avg Score</div>
+        <strong>{{ avg_score }}</strong>
+    </div>
+    <div class="summary-tile">
+        <div class="muted-text small">Shortlist</div>
+        <strong>{{ shortlist_count }}</strong>
+    </div>
+    <div class="summary-tile">
+        <div class="muted-text small">Hold</div>
+        <strong>{{ hold_count }}</strong>
+    </div>
+    <div class="summary-tile">
+        <div class="muted-text small">Reject</div>
+        <strong>{{ reject_count }}</strong>
+    </div>
+</div>
+
+<div class="app-card mb-4">
+    <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-5">
+            <label class="form-label">Search</label>
+            <input type="text" class="form-control" name="search" value="{{ search }}" placeholder="Candidate name or email">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Recommendation</label>
+            <select class="form-select" name="recommendation">
+                <option value="">All</option>
+                <option value="yes" {% if recommendation_filter == "yes" %}selected{% endif %}>Yes</option>
+                <option value="hold" {% if recommendation_filter == "hold" %}selected{% endif %}>Hold</option>
+                <option value="no" {% if recommendation_filter == "no" %}selected{% endif %}>No</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Confidence</label>
+            <select class="form-select" name="confidence">
+                <option value="">All</option>
+                <option value="high" {% if confidence_filter == "high" %}selected{% endif %}>High</option>
+                <option value="medium" {% if confidence_filter == "medium" %}selected{% endif %}>Medium</option>
+                <option value="low" {% if confidence_filter == "low" %}selected{% endif %}>Low</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-grid">
+            <button class="btn btn-primary" type="submit">Apply Filters</button>
+        </div>
+    </form>
+</div>
+
+<div class="app-card mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Pipeline Board</h4>
+        <span class="muted-text small">Drag candidate cards across columns to update recommendation.</span>
+    </div>
+    <div class="kanban-grid">
+        <section class="kanban-column" data-recommendation="yes">
+            <h6>Shortlist (Yes)</h6>
+            <div class="kanban-dropzone" id="drop-yes">
+                {% for card in kanban.yes %}
+                    <article class="candidate-card" data-candidate-id="{{ card.candidate.id }}" data-update-url="{% url 'update_candidate_recommendation' job.id card.candidate.id %}" {% if card.can_move %}draggable="true"{% endif %}>
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <div class="fw-semibold">{{ card.candidate.full_name }}</div>
+                            <span class="badge bg-success">Yes</span>
+                        </div>
+                        <div class="small muted-text mb-2">{{ card.candidate.email }}</div>
+                        <div class="small mb-1">Score: <strong>{% if card.evaluation %}{{ card.evaluation.final_score }}{% else %}-{% endif %}</strong></div>
+                        <div class="small mb-1"><strong>Why:</strong> {{ card.primary_strength }}</div>
+                        <div class="small mb-1"><strong>Gap:</strong> {{ card.primary_gap }}</div>
+                        <div class="small muted-text mb-2">Knockout: {{ card.knockout_state }}</div>
+                        <a href="{% url 'candidate_detail' job.id card.candidate.id %}" class="btn btn-sm btn-outline-dark">Open</a>
+                    </article>
+                {% empty %}
+                    <div class="muted-text small">No candidates.</div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="kanban-column" data-recommendation="hold">
+            <h6>Hold</h6>
+            <div class="kanban-dropzone" id="drop-hold">
+                {% for card in kanban.hold %}
+                    <article class="candidate-card" data-candidate-id="{{ card.candidate.id }}" data-update-url="{% url 'update_candidate_recommendation' job.id card.candidate.id %}" {% if card.can_move %}draggable="true"{% endif %}>
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <div class="fw-semibold">{{ card.candidate.full_name }}</div>
+                            <span class="badge bg-warning text-dark">Hold</span>
+                        </div>
+                        <div class="small muted-text mb-2">{{ card.candidate.email }}</div>
+                        <div class="small mb-1">Score: <strong>{% if card.evaluation %}{{ card.evaluation.final_score }}{% else %}-{% endif %}</strong></div>
+                        <div class="small mb-1"><strong>Why:</strong> {{ card.primary_strength }}</div>
+                        <div class="small mb-1"><strong>Gap:</strong> {{ card.primary_gap }}</div>
+                        <div class="small muted-text mb-2">Knockout: {{ card.knockout_state }}</div>
+                        <a href="{% url 'candidate_detail' job.id card.candidate.id %}" class="btn btn-sm btn-outline-dark">Open</a>
+                    </article>
+                {% empty %}
+                    <div class="muted-text small">No candidates.</div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="kanban-column" data-recommendation="no">
+            <h6>Reject (No)</h6>
+            <div class="kanban-dropzone" id="drop-no">
+                {% for card in kanban.no %}
+                    <article class="candidate-card" data-candidate-id="{{ card.candidate.id }}" data-update-url="{% url 'update_candidate_recommendation' job.id card.candidate.id %}" {% if card.can_move %}draggable="true"{% endif %}>
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <div class="fw-semibold">{{ card.candidate.full_name }}</div>
+                            <span class="badge bg-danger">No</span>
+                        </div>
+                        <div class="small muted-text mb-2">{{ card.candidate.email }}</div>
+                        <div class="small mb-1">Score: <strong>{% if card.evaluation %}{{ card.evaluation.final_score }}{% else %}-{% endif %}</strong></div>
+                        <div class="small mb-1"><strong>Why:</strong> {{ card.primary_strength }}</div>
+                        <div class="small mb-1"><strong>Gap:</strong> {{ card.primary_gap }}</div>
+                        <div class="small muted-text mb-2">Knockout: {{ card.knockout_state }}</div>
+                        <a href="{% url 'candidate_detail' job.id card.candidate.id %}" class="btn btn-sm btn-outline-dark">Open</a>
+                    </article>
+                {% empty %}
+                    <div class="muted-text small">No candidates.</div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+
+{% if unscored_cards %}
+<div class="app-card mb-4">
+    <h5 class="mb-3">Needs Evaluation</h5>
+    <div class="d-flex flex-column gap-2">
+        {% for card in unscored_cards %}
+            <div class="step-card d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="fw-semibold">{{ card.candidate.full_name }}</div>
+                    <div class="small muted-text">{{ card.candidate.email }}</div>
+                </div>
+                <a href="{% url 'candidate_detail' job.id card.candidate.id %}" class="btn btn-sm btn-outline-dark">Open</a>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="app-card">
+    <h4 class="mb-3">Candidates ({{ cards|length }})</h4>
+    <table class="table table-hover align-middle mb-0">
+        <thead>
+            <tr class="text-uppercase text-muted small">
+                <th>Name</th>
+                <th>Email</th>
+                <th>Score</th>
+                <th>Recommendation</th>
+                <th>Confidence</th>
+                <th>Why this score?</th>
+                <th>Explain</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for card in cards %}
+            <tr>
+                <td class="fw-semibold">{{ card.candidate.full_name }}</td>
+                <td>{{ card.candidate.email }}</td>
+                <td>{% if card.evaluation %}{{ card.evaluation.final_score }}{% else %}-{% endif %}</td>
+                <td>
+                    {% if card.evaluation %}
+                        {{ card.evaluation.get_recommendation_display }}
+                    {% else %}
+                        Pending
+                    {% endif %}
+                </td>
+                <td>{% if card.evaluation %}{{ card.evaluation.get_confidence_display }}{% else %}-{% endif %}</td>
+                <td>
+                    <div class="small"><strong>Why:</strong> {{ card.primary_strength }}</div>
+                    <div class="small"><strong>Gap:</strong> {{ card.primary_gap }}</div>
+                    <div class="small muted-text">Knockout: {{ card.knockout_state }}</div>
+                </td>
+                <td>
+                    <a href="{% url 'candidate_detail' job.id card.candidate.id %}" class="btn btn-sm btn-outline-dark">Open</a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="7" class="muted-text">No candidates yet. Share the apply link.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+            return parts.pop().split(';').shift();
+        }
+        return "";
+    }
+
+    let draggedCard = null;
+
+    document.querySelectorAll('.candidate-card[draggable="true"]').forEach((card) => {
+        card.addEventListener('dragstart', () => {
+            draggedCard = card;
+            card.classList.add('dragging');
+        });
+        card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+            draggedCard = null;
+        });
+    });
+
+    document.querySelectorAll('.kanban-dropzone').forEach((zone) => {
+        zone.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            zone.classList.add('drop-active');
+        });
+
+        zone.addEventListener('dragleave', () => {
+            zone.classList.remove('drop-active');
+        });
+
+        zone.addEventListener('drop', async (event) => {
+            event.preventDefault();
+            zone.classList.remove('drop-active');
+            if (!draggedCard) {
+                return;
+            }
+
+            const column = zone.closest('.kanban-column');
+            const recommendation = column.dataset.recommendation;
+            const updateUrl = draggedCard.dataset.updateUrl;
+
+            const previousParent = draggedCard.parentElement;
+            zone.appendChild(draggedCard);
+
+            try {
+                const response = await fetch(updateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ recommendation })
+                });
+
+                const payload = await response.json();
+                if (!response.ok || !payload.ok) {
+                    throw new Error(payload.error || 'Failed to update recommendation.');
+                }
+
+                const badge = draggedCard.querySelector('.badge');
+                if (badge) {
+                    badge.className = 'badge';
+                    if (recommendation === 'yes') {
+                        badge.classList.add('bg-success');
+                        badge.textContent = 'Yes';
+                    } else if (recommendation === 'hold') {
+                        badge.classList.add('bg-warning', 'text-dark');
+                        badge.textContent = 'Hold';
+                    } else {
+                        badge.classList.add('bg-danger');
+                        badge.textContent = 'No';
+                    }
+                }
+            } catch (error) {
+                previousParent.appendChild(draggedCard);
+                window.alert(error.message);
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

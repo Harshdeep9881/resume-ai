@@ -7,7 +7,9 @@ from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.db.models import Q
+from django.http import HttpResponse, JsonResponse
 from django.urls import reverse
+from django.views.decorators.http import require_POST
 from .models import (
     BucketScore,
     Candidate,
@@ -247,7 +249,6 @@ def dashboard(request, job_id):
     })
 
 
-from django.http import HttpResponse
 import openpyxl
 from openpyxl.styles import Font
 
@@ -389,6 +390,7 @@ def setup_job_v2(request):
         "core/setup_job_v2.html",
         {
             "skill_list": SKILL_LIST,
+            "active_nav": "setup",
         },
     )
 
@@ -649,6 +651,7 @@ def job_pipeline(request, job_id):
     candidates = (
         Candidate.objects.filter(job=job)
         .select_related("evaluation")
+        .prefetch_related("knockout_results")
         .order_by("-evaluation__final_score", "-created_at")
     )
     if search:
@@ -668,6 +671,39 @@ def job_pipeline(request, job_id):
         sum(float(item.final_score) for item in metrics_qs) / metrics_qs.count(), 2
     ) if metrics_qs.exists() else 0
 
+    cards = []
+    for candidate in candidates:
+        evaluation = getattr(candidate, "evaluation", None)
+        knockout_results = list(candidate.knockout_results.all())
+        knockout_failed = any(not item.passed for item in knockout_results)
+        if knockout_failed:
+            knockout_state = "Failed"
+        elif knockout_results:
+            knockout_state = "Passed"
+        else:
+            knockout_state = "Not set"
+
+        strengths = evaluation.strengths if evaluation else []
+        gaps = evaluation.gaps if evaluation else []
+        cards.append(
+            {
+                "candidate": candidate,
+                "evaluation": evaluation,
+                "recommendation_key": evaluation.recommendation if evaluation else "",
+                "primary_strength": strengths[0] if strengths else "No strength summary yet.",
+                "primary_gap": gaps[0] if gaps else "No gap summary yet.",
+                "knockout_state": knockout_state,
+                "can_move": bool(evaluation),
+            }
+        )
+
+    kanban = {
+        "yes": [c for c in cards if c["recommendation_key"] == "yes"],
+        "hold": [c for c in cards if c["recommendation_key"] == "hold"],
+        "no": [c for c in cards if c["recommendation_key"] == "no"],
+    }
+    unscored_cards = [c for c in cards if c["recommendation_key"] not in {"yes", "hold", "no"}]
+
     return render(
         request,
         "core/job_pipeline.html",
@@ -681,6 +717,10 @@ def job_pipeline(request, job_id):
             "hold_count": hold_count,
             "reject_count": reject_count,
             "avg_score": avg_score,
+            "cards": cards,
+            "kanban": kanban,
+            "unscored_cards": unscored_cards,
+            "active_nav": "pipeline",
             "apply_url": request.build_absolute_uri(
                 reverse("candidate_apply", kwargs={"job_id": job.id})
             ),
@@ -725,7 +765,40 @@ def candidate_detail(request, job_id, candidate_id):
             "answers": candidate.answers.all().order_by("question__order", "question__id"),
             "artifacts": candidate.artifacts.all(),
             "knockout_results": candidate.knockout_results.all().order_by("id"),
+            "active_nav": "pipeline",
         },
+    )
+
+
+@login_required
+@require_POST
+def update_candidate_recommendation(request, job_id, candidate_id):
+    job = get_object_or_404(Job, id=job_id)
+    candidate = get_object_or_404(Candidate.objects.select_related("evaluation"), id=candidate_id, job=job)
+    evaluation = getattr(candidate, "evaluation", None)
+    if not evaluation:
+        return JsonResponse({"ok": False, "error": "Candidate has no evaluation yet."}, status=400)
+
+    payload = request.POST
+    content_type = request.headers.get("Content-Type", "")
+    if "application/json" in content_type:
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"ok": False, "error": "Invalid JSON payload."}, status=400)
+
+    recommendation = str(payload.get("recommendation", "")).strip()
+    if recommendation not in {"yes", "hold", "no"}:
+        return JsonResponse({"ok": False, "error": "Invalid recommendation value."}, status=400)
+
+    evaluation.recommendation = recommendation
+    evaluation.save(update_fields=["recommendation"])
+    return JsonResponse(
+        {
+            "ok": True,
+            "recommendation": recommendation,
+            "recommendation_display": evaluation.get_recommendation_display(),
+        }
     )
 
 def download_excel(request, job_id):
