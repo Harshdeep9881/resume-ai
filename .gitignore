@@ -5,3 +5,5 @@ venv/
 media/
 *.pyc
 .DS_Store
+training/outputs/
+training/data/labels.csv

@@ -1,0 +1,5 @@
+job_id,job_text,resume_text,outcome
+101,"Senior Backend Engineer...","Built scalable APIs in Python and Django...",shortlist
+101,"Senior Backend Engineer...","Frontend-only profile with React focus...",reject
+102,"ML Engineer...","Production ML pipelines with PyTorch...",interview
+102,"ML Engineer...","No relevant ML experience listed...",reject

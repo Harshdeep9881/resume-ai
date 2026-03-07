@@ -1,21 +1,27 @@
 import re
+import os
 from functools import lru_cache
 from sentence_transformers import SentenceTransformer, util
 from .skills import SKILL_LIST
 
 # Similarity threshold for skill detection (0..1). Tune based on your data.
 SKILL_SIM_THRESHOLD = 0.35
+DEFAULT_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 
-@lru_cache(maxsize=1)
-def _get_model():
-    return SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+@lru_cache(maxsize=4)
+def _get_model(model_name):
+    return SentenceTransformer(model_name)
 
 
-@lru_cache(maxsize=1)
-def _get_skill_embeddings():
-    model = _get_model()
+@lru_cache(maxsize=4)
+def _get_skill_embeddings(model_name):
+    model = _get_model(model_name)
     return model.encode(SKILL_LIST, normalize_embeddings=True)
+
+
+def _resolve_model_name():
+    return os.getenv("RESUME_AI_EMBEDDING_MODEL", DEFAULT_MODEL_NAME)
 
 
 def compute_similarity(job_text, resume_text):
@@ -26,7 +32,7 @@ def compute_similarity(job_text, resume_text):
     if not job_text or not resume_text:
         return 0.0
 
-    model = _get_model()
+    model = _get_model(_resolve_model_name())
     embeddings = model.encode([job_text, resume_text], normalize_embeddings=True)
     score = util.cos_sim(embeddings[0], embeddings[1]).item()
     return round(float(score), 4)
@@ -91,12 +97,13 @@ def extract_skills(text):
         return []
 
     try:
+        model_name = _resolve_model_name()
         keyword_matches = _keyword_match_skills(text)
         if keyword_matches:
             return sorted(set(keyword_matches))
 
-        model = _get_model()
-        skill_embeddings = _get_skill_embeddings()
+        model = _get_model(model_name)
+        skill_embeddings = _get_skill_embeddings(model_name)
         text_embedding = model.encode(text, normalize_embeddings=True)
 
         scores = util.cos_sim(skill_embeddings, text_embedding).tolist()

@@ -124,6 +124,25 @@ python manage.py backfill_candidates_from_resumes --job-id 1
 python manage.py backfill_candidates_from_resumes --dry-run
 ```
 
+## Fine-tuning Pipeline
+
+A complete fine-tuning/evaluation workflow is available under `training/`.
+
+- Guide: `training/README.md`
+- Labeled data template: `training/data/labels_template.csv`
+- Scripts:
+  - `training/prepare_training_data.py`
+  - `training/train_embeddings.py`
+  - `training/evaluate_ranker.py`
+  - `training/smoke_inference.py`
+
+To use a fine-tuned model in the app:
+
+```bash
+export RESUME_AI_EMBEDDING_MODEL=/absolute/path/to/your/model
+python manage.py runserver
+```
+
 ## Notes
 
 - Current settings are development-friendly (`DEBUG=True`, SQLite).
