@@ -1,5 +1,6 @@
 import re
 from .embeddings import extract_skills
+from .multilingual import prepare_text_for_analysis
 
 SECTION_ORDER = ["experience", "projects", "education"]
 SECTION_WEIGHTS = {
@@ -129,11 +130,14 @@ def parse_resume_sections(text):
 
 
 def classify_job_requirements(job_text, selected_skills=None):
+    prepared_job = prepare_text_for_analysis(job_text)
+    job_text_en = prepared_job["translated_text"]
+
     must_skills = set(selected_skills or [])
     nice_skills = set()
     current_mode = None
 
-    for raw_line in (job_text or "").splitlines():
+    for raw_line in (job_text_en or "").splitlines():
         line = _clean_line(raw_line)
         if not line:
             continue
@@ -164,7 +168,7 @@ def classify_job_requirements(job_text, selected_skills=None):
             must_skills |= skills
 
     if not must_skills and not nice_skills:
-        must_skills = set(extract_skills(job_text))
+        must_skills = set(extract_skills(job_text_en))
 
     nice_skills -= must_skills
     return must_skills, nice_skills
@@ -273,15 +277,20 @@ def build_gap_analysis(missing_skills):
 
 
 def score_resume(job_text, resume_text, selected_skills=None, precomputed=None):
+    prepared_resume = prepare_text_for_analysis(resume_text)
+    resume_text_en = prepared_resume["translated_text"]
+
     if precomputed:
         must_skills, nice_skills = precomputed
     else:
         must_skills, nice_skills = classify_job_requirements(job_text, selected_skills)
 
-    sections = parse_resume_sections(resume_text)
+    sections = parse_resume_sections(resume_text_en)
     section_scores = {}
     section_matches = {}
     all_resume_skills = set()
+
+    has_primary_sections = any(sections.get(section, "").strip() for section in SECTION_ORDER)
 
     for section in SECTION_ORDER:
         section_text = sections.get(section, "")
@@ -296,6 +305,22 @@ def score_resume(job_text, resume_text, selected_skills=None, precomputed=None):
             "must_match": sorted(must_match),
             "nice_match": sorted(nice_match),
         }
+
+    # Fallback for resumes without clear headings (common in multilingual CVs).
+    if not has_primary_sections:
+        fallback_text = "\n".join(filter(None, sections.values()))
+        fallback_skills = set(extract_skills(fallback_text))
+        all_resume_skills |= fallback_skills
+        fallback_score, fallback_must, fallback_nice = _section_score(
+            fallback_skills, must_skills, nice_skills
+        )
+        for section in SECTION_ORDER:
+            section_scores[section] = fallback_score
+            section_matches[section] = {
+                "skills": sorted(fallback_skills),
+                "must_match": sorted(fallback_must),
+                "nice_match": sorted(fallback_nice),
+            }
 
     weight_map = _normalize_section_weights(sections)
     overall_score = 0.0
@@ -315,6 +340,7 @@ def score_resume(job_text, resume_text, selected_skills=None, precomputed=None):
 
     return {
         "overall_score": round(overall_score, 4),
+        "detected_language": prepared_resume["detected_language"],
         "section_scores": section_scores,
         "section_matches": section_matches,
         "matched_skills": matched_skills,

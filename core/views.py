@@ -28,6 +28,7 @@ from .utils import extract_text_from_file
 from .embeddings import compute_similarity
 from .scoring import classify_job_requirements, score_resume
 from .skills import SKILL_LIST
+from .multilingual import prepare_text_for_analysis
 
 
 def home(request):
@@ -91,21 +92,24 @@ def upload_resumes(request, job_id):
                 )
                 continue
 
+            prepared_resume = prepare_text_for_analysis(text)
+            analyzed_text = prepared_resume["translated_text"]
+
             if job.skills or job.description:
                 analysis = score_resume(
                     job.description,
-                    text,
+                    analyzed_text,
                     selected_skills=job.skills,
                     precomputed=precomputed,
                 )
                 score = analysis["overall_score"]
             else:
-                score = compute_similarity(job.description, text)
+                score = compute_similarity(job.description, analyzed_text)
 
             Resume.objects.create(
                 job=job,
                 file=file,
-                extracted_text=text,
+                extracted_text=analyzed_text,
                 similarity_score=score
             )
 
@@ -229,7 +233,7 @@ def dashboard(request, job_id):
             precomputed=precomputed,
         )
         r.similarity_score = analysis["overall_score"]
-        if r.must_skills and not analysis["missing_skills"]:
+        if analysis["must_skills"] and not analysis["missing_skills"]:
             shortlisted_count += 1
         elif r.similarity_score >= 0.75:
             shortlisted_count += 1
@@ -430,11 +434,14 @@ def candidate_apply(request, job_id):
                     request,
                     "We saved your profile, but OCR is unavailable for this file type on the server.",
                 )
+            prepared_resume = prepare_text_for_analysis(resume_text)
+            analyzed_resume_text = prepared_resume["translated_text"]
             CandidateResume.objects.create(
                 candidate=candidate,
                 file=resume_file,
-                extracted_text=resume_text,
+                extracted_text=analyzed_resume_text,
             )
+            resume_text = analyzed_resume_text
 
         precomputed = classify_job_requirements(job.description, job.skills)
         analysis = score_resume(

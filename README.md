@@ -143,6 +143,12 @@ export RESUME_AI_EMBEDDING_MODEL=/absolute/path/to/your/model
 python manage.py runserver
 ```
 
+## Multilingual Support
+
+For language detection, translation flow, German/Russian notes, and OCR caveats, see:
+
+- `MULTILINGUAL_README.md`
+
 ## Notes
 
 - Current settings are development-friendly (`DEBUG=True`, SQLite).
