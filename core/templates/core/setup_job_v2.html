@@ -104,6 +104,69 @@
     </div>
     <div class="col-xl-4">
         <div class="app-card">
+            <h5 class="mb-3">✨ AI Assistant</h5>
+            <p class="muted-text mb-3">Let AI help you build the perfect job posting.</p>
+
+            <div class="mb-3">
+                <label class="form-label">Industry (optional)</label>
+                <select class="form-select form-select-sm" id="ai-industry">
+                    <option value="">Auto-detect</option>
+                    <option value="Technology">Technology</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Education">Education</option>
+                    <option value="Legal">Legal</option>
+                    <option value="Manufacturing">Manufacturing</option>
+                    <option value="Construction">Construction</option>
+                    <option value="Retail">Retail</option>
+                    <option value="Hospitality">Hospitality</option>
+                    <option value="Human Resources">Human Resources</option>
+                    <option value="Creative/Design">Creative / Design</option>
+                    <option value="Logistics">Logistics</option>
+                </select>
+            </div>
+
+            <div class="d-flex flex-column gap-2 mb-3">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="ai-gen-desc-btn" disabled>
+                    <span class="ai-spinner d-none" id="ai-desc-spinner"></span>
+                    📝 Generate Description
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="ai-suggest-skills-btn" disabled>
+                    <span class="ai-spinner d-none" id="ai-skills-spinner"></span>
+                    🎯 Suggest Skills
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="ai-suggest-questions-btn" disabled>
+                    <span class="ai-spinner d-none" id="ai-questions-spinner"></span>
+                    ❓ Suggest Questions
+                </button>
+            </div>
+
+            <div id="ai-error" class="text-danger small mb-2 d-none"></div>
+            <div id="ai-suggested-skills" class="d-none">
+                <label class="form-label small">AI-suggested skills <span class="muted-text">(click to add)</span></label>
+                <div id="ai-skill-chips" class="d-flex flex-wrap gap-1"></div>
+            </div>
+
+            <div class="ai-chat mt-3">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="mb-0">Chat Assistant</h6>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="ai-chat-clear">Clear</button>
+                </div>
+                <div class="ai-chat-log" id="ai-chat-log" aria-live="polite">
+                    <div class="ai-chat-message assistant">Ask me to improve this role, draft requirements, tune weights, or create stronger screening questions.</div>
+                </div>
+                <form class="ai-chat-form mt-2" id="ai-chat-form">
+                    <textarea class="form-control form-control-sm" rows="2" id="ai-chat-input" placeholder="Ask anything about this job..." required></textarea>
+                    <button type="submit" class="btn btn-primary btn-sm mt-2 w-100" id="ai-chat-send">
+                        <span class="ai-spinner d-none" id="ai-chat-spinner"></span>
+                        Send
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="app-card mt-3">
             <h5 class="mb-3">What HR gets in V2</h5>
             <div class="d-flex flex-column gap-3">
                 <div class="step-card"><h6>Custom questions</h6><p class="muted-text mb-0">Add role-specific and knockout prompts.</p></div>
@@ -275,5 +338,279 @@
 
     syncSkills();
     syncQuestions();
+
+    /* ── AI Assistant Logic ── */
+    const titleInput = document.querySelector('input[name="title"]');
+    const descTextarea = document.querySelector('textarea[name="description"]');
+    const aiGenDescBtn = document.getElementById("ai-gen-desc-btn");
+    const aiSuggestSkillsBtn = document.getElementById("ai-suggest-skills-btn");
+    const aiSuggestQuestionsBtn = document.getElementById("ai-suggest-questions-btn");
+    const aiDescSpinner = document.getElementById("ai-desc-spinner");
+    const aiSkillsSpinner = document.getElementById("ai-skills-spinner");
+    const aiQuestionsSpinner = document.getElementById("ai-questions-spinner");
+    const aiError = document.getElementById("ai-error");
+    const aiSuggestedSkills = document.getElementById("ai-suggested-skills");
+    const aiSkillChips = document.getElementById("ai-skill-chips");
+    const aiIndustry = document.getElementById("ai-industry");
+    const aiChatLog = document.getElementById("ai-chat-log");
+    const aiChatForm = document.getElementById("ai-chat-form");
+    const aiChatInput = document.getElementById("ai-chat-input");
+    const aiChatSend = document.getElementById("ai-chat-send");
+    const aiChatSpinner = document.getElementById("ai-chat-spinner");
+    const aiChatClear = document.getElementById("ai-chat-clear");
+    let aiChatHistory = [];
+
+    function getCsrfToken() {
+        const cookie = document.cookie.split(";").find(c => c.trim().startsWith("csrftoken="));
+        if (cookie) return cookie.split("=")[1];
+        const input = document.querySelector("[name=csrfmiddlewaretoken]");
+        return input ? input.value : "";
+    }
+
+    function updateAiButtons() {
+        const hasTitle = (titleInput.value || "").trim().length > 0;
+        aiGenDescBtn.disabled = !hasTitle;
+        aiSuggestSkillsBtn.disabled = !hasTitle;
+        aiSuggestQuestionsBtn.disabled = !hasTitle;
+    }
+    titleInput.addEventListener("input", updateAiButtons);
+    updateAiButtons();
+
+    function showAiError(msg) {
+        aiError.textContent = msg;
+        aiError.classList.remove("d-none");
+        setTimeout(() => aiError.classList.add("d-none"), 8000);
+    }
+
+    aiGenDescBtn.addEventListener("click", async () => {
+        const title = (titleInput.value || "").trim();
+        if (!title) return;
+        aiDescSpinner.classList.remove("d-none");
+        aiGenDescBtn.disabled = true;
+        aiError.classList.add("d-none");
+        try {
+            const res = await fetch("/api/ai/generate-description/", {
+                method: "POST",
+                headers: {"Content-Type": "application/json", "X-CSRFToken": getCsrfToken()},
+                body: JSON.stringify({title, industry_hint: aiIndustry.value}),
+            });
+            const data = await res.json();
+            if (data.ok) {
+                descTextarea.value = data.description;
+            } else {
+                showAiError(data.error || "Failed to generate description.");
+            }
+        } catch (e) {
+            showAiError("Network error. Check your connection.");
+        }
+        aiDescSpinner.classList.add("d-none");
+        updateAiButtons();
+    });
+
+    aiSuggestSkillsBtn.addEventListener("click", async () => {
+        const title = (titleInput.value || "").trim();
+        if (!title) return;
+        aiSkillsSpinner.classList.remove("d-none");
+        aiSuggestSkillsBtn.disabled = true;
+        aiError.classList.add("d-none");
+        try {
+            const res = await fetch("/api/ai/suggest-skills/", {
+                method: "POST",
+                headers: {"Content-Type": "application/json", "X-CSRFToken": getCsrfToken()},
+                body: JSON.stringify({title, description: descTextarea.value}),
+            });
+            const data = await res.json();
+            if (data.ok && data.skills) {
+                aiSkillChips.innerHTML = "";
+                data.skills.forEach(skill => {
+                    const chip = document.createElement("button");
+                    chip.type = "button";
+                    chip.className = "btn btn-sm btn-outline-secondary ai-skill-chip";
+                    chip.textContent = skill;
+                    chip.addEventListener("click", () => {
+                        addTag(skill);
+                        chip.classList.add("btn-secondary");
+                        chip.classList.remove("btn-outline-secondary");
+                        chip.disabled = true;
+                    });
+                    if (selected.has(skill)) {
+                        chip.classList.add("btn-secondary");
+                        chip.classList.remove("btn-outline-secondary");
+                        chip.disabled = true;
+                    }
+                    aiSkillChips.appendChild(chip);
+                });
+                aiSuggestedSkills.classList.remove("d-none");
+            } else {
+                showAiError(data.error || "Failed to suggest skills.");
+            }
+        } catch (e) {
+            showAiError("Network error. Check your connection.");
+        }
+        aiSkillsSpinner.classList.add("d-none");
+        updateAiButtons();
+    });
+
+    aiSuggestQuestionsBtn.addEventListener("click", async () => {
+        const title = (titleInput.value || "").trim();
+        if (!title) return;
+        aiQuestionsSpinner.classList.remove("d-none");
+        aiSuggestQuestionsBtn.disabled = true;
+        aiError.classList.add("d-none");
+        try {
+            const res = await fetch("/api/ai/suggest-questions/", {
+                method: "POST",
+                headers: {"Content-Type": "application/json", "X-CSRFToken": getCsrfToken()},
+                body: JSON.stringify({title, description: descTextarea.value}),
+            });
+            const data = await res.json();
+            if (data.ok && data.questions) {
+                data.questions.forEach(q => {
+                    questions.push({
+                        prompt: q.prompt || "",
+                        question_type: q.question_type || "short_text",
+                        bucket: q.bucket || "",
+                        is_required: q.is_required !== false,
+                        is_knockout: !!q.is_knockout,
+                        knockout_value: q.knockout_value || ""
+                    });
+                });
+                renderQuestions();
+                syncQuestions();
+            } else {
+                showAiError(data.error || "Failed to suggest questions.");
+            }
+        } catch (e) {
+            showAiError("Network error. Check your connection.");
+        }
+        aiQuestionsSpinner.classList.add("d-none");
+        updateAiButtons();
+    });
+
+    function appendChatMessage(role, content) {
+        const message = document.createElement("div");
+        message.className = `ai-chat-message ${role}`;
+        message.textContent = content;
+        aiChatLog.appendChild(message);
+        aiChatLog.scrollTop = aiChatLog.scrollHeight;
+    }
+
+    function getJobContext() {
+        return {
+            title: titleInput.value || "",
+            description: descTextarea.value || "",
+            skills: Array.from(selected),
+            questions: questions,
+            industry: aiIndustry.value || ""
+        };
+    }
+
+    aiChatForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const message = (aiChatInput.value || "").trim();
+        if (!message) return;
+
+        appendChatMessage("user", message);
+        aiChatInput.value = "";
+        aiChatSend.disabled = true;
+        aiChatSpinner.classList.remove("d-none");
+        aiError.classList.add("d-none");
+
+        try {
+            const res = await fetch("/api/ai/chat/", {
+                method: "POST",
+                headers: {"Content-Type": "application/json", "X-CSRFToken": getCsrfToken()},
+                body: JSON.stringify({
+                    message,
+                    history: aiChatHistory,
+                    context: getJobContext()
+                }),
+            });
+            const data = await res.json();
+            if (data.ok && data.reply) {
+                appendChatMessage("assistant", data.reply);
+                aiChatHistory.push({role: "user", content: message});
+                aiChatHistory.push({role: "assistant", content: data.reply});
+                aiChatHistory = aiChatHistory.slice(-12);
+            } else {
+                showAiError(data.error || "Failed to get a chat response.");
+            }
+        } catch (e) {
+            showAiError("Network error. Check your connection.");
+        }
+
+        aiChatSpinner.classList.add("d-none");
+        aiChatSend.disabled = false;
+        aiChatInput.focus();
+    });
+
+    aiChatClear.addEventListener("click", () => {
+        aiChatHistory = [];
+        aiChatLog.innerHTML = "";
+        appendChatMessage("assistant", "Chat cleared. What would you like to improve next?");
+    });
 </script>
+
+<style>
+    .ai-spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: ai-spin 0.6s linear infinite;
+        vertical-align: middle;
+        margin-right: 4px;
+    }
+    .ai-spinner.d-none { display: none !important; }
+    @keyframes ai-spin { to { transform: rotate(360deg); } }
+    .ai-skill-chip {
+        font-size: 0.78rem;
+        padding: 2px 10px;
+        border-radius: 20px;
+        transition: all 0.15s ease;
+    }
+    .ai-skill-chip:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .ai-chat {
+        border-top: 1px solid rgba(15, 23, 42, 0.12);
+        padding-top: 14px;
+    }
+    .ai-chat-log {
+        max-height: 280px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px;
+        background: #f8fafc;
+        border: 1px solid rgba(15, 23, 42, 0.1);
+        border-radius: 8px;
+    }
+    .ai-chat-message {
+        max-width: 92%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        line-height: 1.35;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+    .ai-chat-message.assistant {
+        align-self: flex-start;
+        background: #ffffff;
+        border: 1px solid rgba(15, 23, 42, 0.1);
+    }
+    .ai-chat-message.user {
+        align-self: flex-end;
+        background: #0f172a;
+        color: #ffffff;
+    }
+    .ai-chat-form textarea {
+        resize: vertical;
+    }
+</style>
 {% endblock %}

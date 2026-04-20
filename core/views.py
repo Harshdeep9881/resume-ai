@@ -857,3 +857,128 @@ def download_excel(request, job_id):
 
     wb.save(response)
     return response
+
+
+from .ai_assistant import (
+    chat_with_assistant,
+    generate_job_description,
+    suggest_screening_questions,
+    suggest_skills as ai_suggest_skills,
+)
+
+
+@login_required
+@require_POST
+def api_generate_description(request):
+    """AJAX: Generate a job description from a title using AI."""
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
+
+    title = str(payload.get("title", "")).strip()
+    industry_hint = str(payload.get("industry_hint", "")).strip()
+
+    if not title:
+        return JsonResponse({"ok": False, "error": "Job title is required."}, status=400)
+
+    result = generate_job_description(title, industry_hint)
+    if result is None:
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "AI service unavailable. Make sure Ollama is running (ollama serve) or set GEMINI_API_KEY in .env.",
+            },
+            status=503,
+        )
+
+    return JsonResponse({"ok": True, **result})
+
+
+@login_required
+@require_POST
+def api_suggest_skills(request):
+    """AJAX: Suggest relevant skills for a job using AI."""
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
+
+    title = str(payload.get("title", "")).strip()
+    description = str(payload.get("description", "")).strip()
+
+    if not title:
+        return JsonResponse({"ok": False, "error": "Job title is required."}, status=400)
+
+    skills = ai_suggest_skills(title, description)
+    if not skills:
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "AI service unavailable. Make sure Ollama is running (ollama serve) or set GEMINI_API_KEY in .env.",
+            },
+            status=503,
+        )
+
+    return JsonResponse({"ok": True, "skills": skills})
+
+
+@login_required
+@require_POST
+def api_suggest_questions(request):
+    """AJAX: Suggest screening questions for a job using AI."""
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
+
+    title = str(payload.get("title", "")).strip()
+    description = str(payload.get("description", "")).strip()
+
+    if not title:
+        return JsonResponse({"ok": False, "error": "Job title is required."}, status=400)
+
+    questions = suggest_screening_questions(title, description)
+    if not questions:
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "AI service unavailable. Make sure Ollama is running (ollama serve) or set GEMINI_API_KEY in .env.",
+            },
+            status=503,
+        )
+
+    return JsonResponse({"ok": True, "questions": questions})
+
+
+@login_required
+@require_POST
+def api_ai_chat(request):
+    """AJAX: Chat with the recruiting assistant."""
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
+
+    message = str(payload.get("message", "")).strip()
+    history = payload.get("history", [])
+    context = payload.get("context", {})
+
+    if not message:
+        return JsonResponse({"ok": False, "error": "Message is required."}, status=400)
+    if not isinstance(history, list):
+        history = []
+    if not isinstance(context, dict):
+        context = {}
+
+    reply = chat_with_assistant(message, history=history, context=context)
+    if not reply:
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "AI service unavailable. Make sure Ollama is running (ollama serve) or set GEMINI_API_KEY in .env.",
+            },
+            status=503,
+        )
+
+    return JsonResponse({"ok": True, "reply": reply})

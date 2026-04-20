@@ -19,4 +19,10 @@ urlpatterns = [
     path('results/<int:job_id>/', views.results, name="results"),
     path('compare/<int:job_id>/', views.compare_candidates, name="compare_candidates"),
     path('download-excel/<int:job_id>/', views.download_excel, name="download_excel"),
+
+    # AI Assistant API
+    path('api/ai/generate-description/', views.api_generate_description, name="api_generate_description"),
+    path('api/ai/suggest-skills/', views.api_suggest_skills, name="api_suggest_skills"),
+    path('api/ai/suggest-questions/', views.api_suggest_questions, name="api_suggest_questions"),
+    path('api/ai/chat/', views.api_ai_chat, name="api_ai_chat"),
 ]
