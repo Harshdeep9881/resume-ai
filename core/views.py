@@ -29,7 +29,7 @@ from .embeddings import compute_similarity
 from .scoring import classify_job_requirements, score_resume
 from .skills import SKILL_LIST
 from .multilingual import prepare_text_for_analysis
-
+from .ai_assistant import _call_ai, _extract_json
 
 def home(request):
     return render(request, "core/home.html")
@@ -450,6 +450,33 @@ def candidate_apply(request, job_id):
             selected_skills=job.skills,
             precomputed=precomputed,
         )
+        # --- Hybrid Shortlisting: BERT + Ollama ---
+        bert_score = analysis.get('overall_score', 0.0)
+        blended_score = bert_score
+        # Threshold for invoking Ollama (adjust as needed)
+        if bert_score >= 0.6:
+            prompt = f"""
+You are an expert recruiter evaluating a candidate for a specific job.
+Job Description: {job.description}\n\nCandidate Resume Text: {resume_text}\n\nProvide a JSON object with:
+  "role_fit_score": integer 1-5,
+  "problem_solving_score": integer 1-5,
+  "reasoning": short sentence explaining the scores.
+"""
+            ollama_response = _call_ai(prompt)
+            ollama_json = _extract_json(ollama_response) if ollama_response else None
+            if ollama_json and isinstance(ollama_json, dict):
+                role_score = ollama_json.get('role_fit_score')
+                prob_score = ollama_json.get('problem_solving_score')
+                if role_score is not None and prob_score is not None:
+                    try:
+                        role_score = float(role_score)
+                        prob_score = float(prob_score)
+                        # Normalize to 0-1 range (max 5)
+                        ollama_norm = (role_score + prob_score) / 10.0
+                        blended_score = (bert_score * 0.6) + (ollama_norm * 0.4)
+                    except (ValueError, TypeError):
+                        blended_score = bert_score
+        # End of hybrid shortlisting
 
         knockout_failed = False
         answered_by_bucket = {
@@ -513,7 +540,7 @@ def candidate_apply(request, job_id):
             return Decimal("5.0") * Decimal(sum(1 for a in answers if a)) / Decimal(len(answers))
 
         raw_scores = {
-            "skills_evidence": Decimal(str(round((analysis.get("overall_score", 0.0) * 5), 2))),
+            "skills_evidence": Decimal(str(round((blended_score * 5), 2))),
             "problem_solving": _ratio_raw("problem_solving"),
             "role_fit": Decimal(str(round((analysis.get("overall_score", 0.0) * 5), 2))),
             "work_style": _ratio_raw("work_style"),
@@ -860,6 +887,8 @@ def download_excel(request, job_id):
 
 
 from .ai_assistant import (
+    _call_ai,
+    _extract_json,
     chat_with_assistant,
     generate_job_description,
     suggest_screening_questions,

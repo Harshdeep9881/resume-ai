@@ -1,9 +1,21 @@
 # Resume AI
 
-A Django-based resume screening platform with two workflows:
+A Django-based resume screening platform with two workflows: legacy similarity scoring and a V2 multi-signal evaluation pipeline. Supports local AI assistance using Ollama and Google Gemini.
 
-- Legacy flow: upload a job description + bulk resumes, then rank candidates.
-- V2 hiring flow: create a structured job, collect candidate applications, score using weighted buckets, and manage a hiring pipeline.
+## System Architecture & Workflows
+
+The platform operates as a modular Django application with an SQLite database (adaptable to PostgreSQL/MySQL). It provides two distinct operational flows:
+
+1. **Legacy Flow:** Centered around bulk uploading applicant resumes against a job description. Uses `sentence-transformers` for embeddings to compute a direct similarity score.
+2. **V2 Hiring Flow:** A comprehensive applicant tracking system. Users create structured job postings (with Must-Have/Nice-to-Have criteria, weighted buckets). Candidates apply through an integrated portal with custom screening questions and artifacts. The system then evaluates candidates based on skills, problem-solving, role fit, and work style, culminating in a `yes`, `hold`, or `no` recommendation.
+
+### AI Recruiting Assistant & RAG Workflow
+
+The platform features an intelligent AI Assistant designed to aid recruiters.
+- **RAG-Powered Context:** The assistant utilizes a Retrieval-Augmented Generation (RAG) approach. As users interact with the chatbot, it dynamically injects the current job context (Job Title, Description, Selected Skills, and configured Screening Questions) into the prompt. This grounds the AI's generation, ensuring highly relevant and tailored advice.
+- **Features:** Generates structured job descriptions, recommends top skills, creates varied screening questions with knockout conditions, and answers HR queries.
+- **Ollama Primary Backend:** Configured to run locally and privately using [Ollama](https://ollama.com/) (defaults to `llama3.2`), avoiding API costs and ensuring data privacy.
+- **Gemini Fallback:** Seamlessly falls back to Google's Gemini API (`gemini-2.0-flash`, etc.) if the local Ollama instance is unavailable and a `GEMINI_API_KEY` is provided.
 
 ## Features
 
@@ -30,6 +42,7 @@ A Django-based resume screening platform with two workflows:
 - Python 3.12+
 - Django 6.x
 - SQLite (default)
+- **Ollama** (Local AI processing) / **Google Gemini** (Fallback API)
 - sentence-transformers (`all-MiniLM-L6-v2`) for embedding similarity
 - PyPDF2 + Pillow + pytesseract for document parsing
 - Bootstrap 5 + Django templates
@@ -50,6 +63,13 @@ A Django-based resume screening platform with two workflows:
 
 ## Local Setup
 
+### 1. Ollama Setup (Optional but recommended for Local AI)
+To use the AI Assistant locally without using Gemini API credits:
+1. Install Ollama: `curl -fsSL https://ollama.com/install.sh | sh` (or visit [ollama.com](https://ollama.com/download))
+2. Pull the default model: `ollama pull llama3.2`
+3. Serve the model: `ollama serve`
+
+### 2. Django Setup
 1. Create and activate a virtual environment.
 2. Install dependencies.
 3. Run migrations.
@@ -154,6 +174,7 @@ For language detection, translation flow, German/Russian notes, and OCR caveats,
 - Current settings are development-friendly (`DEBUG=True`, SQLite).
 - `SECRET_KEY` is currently hardcoded in settings and should be moved to environment variables before production deployment.
 - `ALLOWED_HOSTS` is empty by default and must be configured for deployment.
+- For Gemini API fallback, set `GEMINI_API_KEY=your_api_key_here` in a `.env` file or your environment variable settings.
 
 ## License
 

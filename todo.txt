@@ -1,0 +1,6 @@
+- [ ] Implement Two-Pass Hybrid AI Shortlisting Workflow
+  * Pass 1 (High-Speed Filtering): Use sentence-transformers (BERT) to calculate similarity scores and filter out low-scoring candidates (e.g., < 0.60 score).
+  * Pass 2 (Deep Contextual Reasoning): Send the top-scoring resumes to Ollama (LLM) for deep contextual analysis.
+  * Task: Modify `core/views.py` (`candidate_apply` function) to pass BERT-approved resumes to Ollama.
+  * Task: Prompt Ollama to extract structured scoring for Role Fit and Problem Solving buckets, and provide a 1-2 sentence reasoning summary.
+  * Task: Blend BERT's mathematical embedding score with Ollama's qualitative reasoning scores for the ultimate final_score and Kanban board recommendation.
